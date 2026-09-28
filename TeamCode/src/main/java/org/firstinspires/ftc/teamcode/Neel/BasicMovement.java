@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 
-@TeleOp(name = "Red FTC Comp", group = "Red Ftc Comp")
+@TeleOp(name = "Basic Movement", group = "Glitch")
 public class BasicMovement extends LinearOpMode {
 
 
@@ -72,7 +72,7 @@ public class BasicMovement extends LinearOpMode {
         backLeftMotor = hardwareMap.dcMotor.get("backLeft");
         frontRightMotor = hardwareMap.dcMotor.get("frontRight");
         backRightMotor = hardwareMap.dcMotor.get("backRight");
-
+        //intake = hardwareMap.CrServo.get("Intake");
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -85,6 +85,17 @@ public class BasicMovement extends LinearOpMode {
         frontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
+//    private void runintakemotor() {
+//        if (gamepad1.dpad_up) {
+//            intake.setPower(1);
+//        }
+//        if (gamepad1.dpad_down) {
+//            intake.setPower(-1);
+//        }
+//        if (gamepad1.dpad_left) {
+//            intake.setPower(0);
+//        }
+    }
 
 
-}
+
