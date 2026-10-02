@@ -2,14 +2,13 @@ package org.firstinspires.ftc.teamcode.raahi;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.LLStatus;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import java.util.List;
 
 @TeleOp(name = "limelightTest", group = "limelightTest")
-public class limelightTest extends LinearOpMode {
+public class limelightTestBlue extends LinearOpMode {
 
     // Specific tag marker
     private static final String LIMELIGHT_NAME = "limelight";
@@ -41,11 +40,11 @@ public class limelightTest extends LinearOpMode {
             // Can change to whatever values are needed
             // Having operator control
             if (gamepad2.a && !previousA) {
-                targetTagID = 21;
+                targetTagID = 30;
             }
 
             if (gamepad2.b && !previousB) {
-                targetTagID = 5;
+                targetTagID = 31;
             }
 
             previousA = gamepad2.a;
