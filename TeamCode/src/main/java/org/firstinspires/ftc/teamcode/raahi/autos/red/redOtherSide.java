@@ -27,8 +27,7 @@ public class redOtherSide extends LinearOpMode {
         limelight.setPollRateHz(100);
         limelight.pipelineSwitch(aprilTagPipeline);
 
-        telemetry.addLine("Ready. Press START.");
-        telemetry.update();
+
 
         waitForStart();
         limelight.start();
