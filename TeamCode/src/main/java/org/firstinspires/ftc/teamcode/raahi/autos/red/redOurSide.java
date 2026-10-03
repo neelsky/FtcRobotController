@@ -33,37 +33,41 @@ public class redOurSide extends LinearOpMode {
         limelight.start();
 
         while (opModeIsActive()) {
-            LLResultTypes.FiducialResult upTag = null;
-            double upTagHeight = Double.NEGATIVE_INFINITY;
-
-            LLResult result = limelight.getLatestResult();
-            if (result != null && result.isValid()) {
-                List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
-
-                for (LLResultTypes.FiducialResult tag : tags) {
-                    int id = tag.getFiducialId();
-                    if (id != scoringSideTag && id != aprilTagPipeline) {
-                        continue; // ignore all other tags
-                    }
-
-                    // Keep whichever hive tag is highest (the side that's up).
-                    double height = tagHeightInches(tag);
-                    if (upTag == null || height > upTagHeight) {
-                        upTag = tag;
-                        upTagHeight = height;
-                    }
-                }
-            }
-
-            if (upTag == null) {
-                telemetry.addData("Distance to hive", "no tag in view");
-            } else {
-                telemetry.addData("Distance to hive", "%.1f in", distanceToTagInches(upTag));
-            }
-            telemetry.update();
+            limelightDistance();
         }
 
         limelight.stop();
+    }
+
+    private void limelightDistance(){
+        LLResultTypes.FiducialResult upTag = null;
+        double upTagHeight = Double.NEGATIVE_INFINITY;
+
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+
+            for (LLResultTypes.FiducialResult tag : tags) {
+                int id = tag.getFiducialId();
+                if (id != scoringSideTag && id != aprilTagPipeline) {
+                    continue; // ignore all other tags
+                }
+
+                // Keep whichever hive tag is highest (the side that's up).
+                double height = tagHeightInches(tag);
+                if (upTag == null || height > upTagHeight) {
+                    upTag = tag;
+                    upTagHeight = height;
+                }
+            }
+        }
+
+        if (upTag == null) {
+            telemetry.addData("Distance to hive", "no tag in view");
+        } else {
+            telemetry.addData("Distance to hive", "%.1f in", distanceToTagInches(upTag));
+        }
+        telemetry.update();
     }
 
     /** Height (Z) of the tag in robot space, in inches. */
