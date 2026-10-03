@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.red;
 
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -7,6 +8,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -19,6 +21,9 @@ import java.util.List;
 public class redFlower extends LinearOpMode {
 
     private DcMotorEx outtake;
+
+    private DcMotor leftFront, rightFront, leftBack, rightBack;
+    private GoBildaPinpointDriver odometry;
 
     public static double NEW_P = 7.0;
     public static double NEW_I = 0.0;
@@ -165,5 +170,11 @@ public class redFlower extends LinearOpMode {
                 "P=%.6f I=%.6f D=%.6f F=%.6f",
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
+
+        leftFront  = hardwareMap.get(DcMotor.class, "left_front");
+        rightFront = hardwareMap.get(DcMotor.class, "right_front");
+        leftBack   = hardwareMap.get(DcMotor.class, "left_back");
+        rightBack  = hardwareMap.get(DcMotor.class, "right_back");
+        odometry   = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
     }
 }
