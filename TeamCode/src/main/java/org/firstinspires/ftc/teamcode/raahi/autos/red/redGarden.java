@@ -31,8 +31,8 @@ public class redGarden extends LinearOpMode {
     double minRange;
     double maxRange;
 
-    private static final int scoringSideTag = 40;
-    private static final int audienceSideTag = 44;
+    private static final int scoringSideTag = 32;
+    private static final int audienceSideTag = 36;
     private static final int aprilTagPipeline = 0;
 
     private Limelight3A limelight;
