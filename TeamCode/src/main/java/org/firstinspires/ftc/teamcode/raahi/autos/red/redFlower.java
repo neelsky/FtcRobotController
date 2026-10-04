@@ -13,6 +13,8 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 import java.util.List;
 
@@ -29,6 +31,13 @@ public class redFlower extends LinearOpMode {
     public static double NEW_I = 0.0;
     public static double NEW_D = 0.0;
     public static double NEW_F = 15.0;
+
+    static final double mmPerFoot   = 304.8;
+    static final double mmErrorTolerance  = 25;
+    static final double maxPower     = 0.6;
+    static final double minPower     = 0.2;
+    static final double brakeDistance   = 0.002;
+    static final double heading    = 1.0;
 
     boolean isAtGoalVelocity = false;
 
@@ -171,10 +180,10 @@ public class redFlower extends LinearOpMode {
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
 
-        leftFront  = hardwareMap.get(DcMotor.class, "left_front");
-        rightFront = hardwareMap.get(DcMotor.class, "right_front");
-        leftBack   = hardwareMap.get(DcMotor.class, "left_back");
-        rightBack  = hardwareMap.get(DcMotor.class, "right_back");
+        leftFront  = hardwareMap.get(DcMotor.class, "frontleft");
+        rightFront = hardwareMap.get(DcMotor.class, "frontright");
+        leftBack   = hardwareMap.get(DcMotor.class, "backleft");
+        rightBack  = hardwareMap.get(DcMotor.class, "backright");
         odometry   = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
     }
 }
