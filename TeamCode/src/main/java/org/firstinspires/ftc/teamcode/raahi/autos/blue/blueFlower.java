@@ -22,17 +22,26 @@ import java.util.List;
 @Autonomous(name = "Distance To Hive (Limelight)", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
+
+    //PLACEHOLDERS
+    double xoffset;
+    double yoffset;
+
     private DcMotorEx outtake;
 
-    private DcMotor leftFront, rightFront, leftBack, rightBack;
+    private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver odometry;
 
     static final double mmPerFoot   = 304.8;
     static final double mmErrorTolerance  = 25;
     static final double maxPower     = 0.6;
     static final double minPower     = 0.2;
-    static final double brakeDistance   = 0.002;
-    static final double heading    = 1.0;
+    static final double distanceOffset   = 0.002;
+    static final double headingOffset    = 1.0;
+
+    double currentX;
+    double currentY;
+    double currentHeading;
             ;
 
     public static double NEW_P = 7.0;
@@ -67,8 +76,9 @@ public class blueFlower extends LinearOpMode {
         limelight.start();
 
         initializeMotors();
+        setUpOdometry();
 
-        while (opModeIsActive()) {
+        /*while (opModeIsActive()) {
             LLResultTypes.FiducialResult upTag = findUpTag();
             if(upTag != null){
                 setGoalVelocity(upTag);
@@ -78,7 +88,15 @@ public class blueFlower extends LinearOpMode {
                 outtake.setVelocity(0);
 
             }
-        }
+        }*/
+
+        drive(2000,0,0);
+        sleep(1000);
+        drive(0,2000,0);
+        sleep(1000);
+        drive(2000,2000,0);
+        sleep(1000);
+        drive(0,0,30);
 
         limelight.stop();
     }
@@ -181,10 +199,88 @@ public class blueFlower extends LinearOpMode {
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
 
-        leftFront  = hardwareMap.get(DcMotor.class, "frontleft");
-        rightFront = hardwareMap.get(DcMotor.class, "frontright");
-        leftBack   = hardwareMap.get(DcMotor.class, "backleft");
-        rightBack  = hardwareMap.get(DcMotor.class, "backright");
+        frontLeft  = hardwareMap.get(DcMotor.class, "frontleft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontright");
+        backLeft   = hardwareMap.get(DcMotor.class, "backleft");
+        backRight  = hardwareMap.get(DcMotor.class, "backright");
         odometry   = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
+
+        frontLeft.setDirection(DcMotor.Direction.FORWARD);
+        backLeft.setDirection(DcMotor.Direction.REVERSE);
+        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        backRight.setDirection(DcMotor.Direction.FORWARD);
+
+        for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight}){
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
     }
+
+    private void setUpOdometry(){
+        odometry.setOffsets(xoffset, yoffset, DistanceUnit.MM);
+        odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        odometry.resetPosAndIMU();
+    }
+
+    private void drive(double targetX, double targetY, double targetHeading){
+        while(opModeIsActive()){
+            odometry.update();
+            Pose2D currentPosition = odometry.getPosition();
+            double currentX = currentPosition.getX(DistanceUnit.MM);
+            double currentY = currentPosition.getY(DistanceUnit.MM);
+            double currentHeading = currentPosition.getHeading(AngleUnit.RADIANS);
+
+            double xError = targetX - currentX;
+            double yError = targetY - currentY;
+            double headingError = targetHeading - currentHeading;
+            double neededDistance = Math.hypot(xError, yError);
+            double neededAngle = Math.atan2(yError, xError);
+
+            if (neededDistance < mmErrorTolerance) return;
+
+            double forwardErr =  xError * Math.cos(currentHeading) + yError * Math.sin(currentHeading);
+            double leftErr    = -xError * Math.sin(currentHeading) + yError * Math.cos(currentHeading);
+
+            double speed = Math.max(minPower, Math.min(maxPower, neededDistance * distanceOffset));
+            double speedX = (forwardErr / neededDistance) * speed;
+            double speedY = (leftErr / neededDistance) * speed;
+
+
+            double turn = turnAngle(neededAngle) * headingOffset;
+
+            setPower(speedX, speedY, turn);
+        }
+
+        setPower(0, 0, 0);
+        sleep(100);
+
+
+
+
+
+
+    }
+
+    private void setPower(double forward, double left, double turn){
+        double frontLeftPowerHelper = forward + left + turn;
+        double frontRightPowerHelper = forward - left - turn;
+        double backLeftPowerHelper = forward - left + turn;
+        double backRightPowerHelper = forward + left - turn;
+
+        double max = Math.max(1.0, Math.max(Math.max(Math.abs(frontLeftPowerHelper), Math.abs(frontRightPowerHelper)), Math.max(Math.abs(backLeftPowerHelper), Math.abs(backLeftPowerHelper))));
+
+        frontLeft.setPower(frontLeftPowerHelper / max);
+        frontRight.setPower(frontRightPowerHelper / max);
+        backLeft.setPower(backLeftPowerHelper / max);
+        backRight.setPower(backRightPowerHelper / max);
+    }
+
+    private double turnAngle(double angleHelper){
+        while (angleHelper > Math.PI)  angleHelper -= 2 * Math.PI;
+        while (angleHelper < -Math.PI) angleHelper += 2 * Math.PI;
+        return angleHelper;
+    }
+
+
+
 }
