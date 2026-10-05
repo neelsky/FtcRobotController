@@ -10,6 +10,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.hardware.CRServo;
+
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
@@ -29,6 +31,8 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotorEx outtake;
 
+    private CRServo intake;
+
     private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver odometry;
 
@@ -42,7 +46,6 @@ public class blueFlower extends LinearOpMode {
     double currentX;
     double currentY;
     double currentHeading;
-            ;
 
     public static double NEW_P = 7.0;
     public static double NEW_I = 0.0;
@@ -90,13 +93,13 @@ public class blueFlower extends LinearOpMode {
             }
         }*/
 
-        drive(2000,0,0);
+        drive(2000,0,0, false);
         sleep(1000);
-        drive(0,2000,0);
+        drive(0,2000,0, true);
         sleep(1000);
-        drive(2000,2000,0);
+        drive(2000,2000,0, true);
         sleep(1000);
-        drive(0,0,30);
+        drive(0,0,30, false);
 
         limelight.stop();
     }
@@ -199,11 +202,12 @@ public class blueFlower extends LinearOpMode {
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
 
-        frontLeft  = hardwareMap.get(DcMotor.class, "frontleft");
+        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
         frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        backLeft   = hardwareMap.get(DcMotor.class, "backleft");
-        backRight  = hardwareMap.get(DcMotor.class, "backright");
-        odometry   = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
+        backLeft = hardwareMap.get(DcMotor.class, "backleft");
+        backRight = hardwareMap.get(DcMotor.class, "backright");
+        odometry = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
+        intake = hardwareMap.get(CRServo.class, "intake");
 
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
         backLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -222,7 +226,7 @@ public class blueFlower extends LinearOpMode {
         odometry.resetPosAndIMU();
     }
 
-    private void drive(double targetX, double targetY, double targetHeading){
+    private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper){
         while(opModeIsActive()){
             odometry.update();
             Pose2D currentPosition = odometry.getPosition();
@@ -247,6 +251,12 @@ public class blueFlower extends LinearOpMode {
 
 
             double turn = turnAngle(neededAngle) * headingOffset;
+
+            if(intakeHelper = true){
+                intake.setPower(1);
+            }else{
+                intake.setPower(0);
+            }
 
             setPower(speedX, speedY, turn);
         }
