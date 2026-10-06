@@ -31,7 +31,9 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotorEx outtake;
 
-    private CRServo intake;
+    private CRServo leftIntake;
+    private CRServo rightIntake;
+    private DcMotorEx mainIntake;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver odometry;
@@ -207,7 +209,10 @@ public class blueFlower extends LinearOpMode {
         backLeft = hardwareMap.get(DcMotor.class, "backleft");
         backRight = hardwareMap.get(DcMotor.class, "backright");
         odometry = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
-        intake = hardwareMap.get(CRServo.class, "intake");
+        leftIntake = hardwareMap.get(CRServo.class, "leftIntake");
+        rightIntake = hardwareMap.get(CRServo.class, "rightIntake");
+        mainIntake = hardwareMap.get(DcMotorEx.class, "mainIntake");
+
 
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
         backLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -253,9 +258,13 @@ public class blueFlower extends LinearOpMode {
             double turn = turnAngle(neededAngle) * headingOffset;
 
             if(intakeHelper = true){
-                intake.setPower(1);
+                leftIntake.setPower(0.3);
+                rightIntake.setPower(0.3);
+                mainIntake.setPower(0.6);
             }else{
-                intake.setPower(0);
+                leftIntake.setPower(0);
+                rightIntake.setPower(0);
+                mainIntake.setPower(0);
             }
 
             setPower(speedX, speedY, turn);
