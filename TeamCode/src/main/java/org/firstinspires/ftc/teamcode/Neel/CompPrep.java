@@ -31,7 +31,9 @@ public class CompPrep extends LinearOpMode {
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
     private DcMotorEx outtake;
-    private CRServo intake;
+    private DcMotorEx intake;
+    private CRServo rightServo;
+    private CRServo leftServo;
     private Limelight3A limelight;
 
     int goalVelocity = 0;
@@ -61,7 +63,7 @@ public class CompPrep extends LinearOpMode {
             runOuttakeMotor();
             checkIfShooting();
             checkToResetState();
-
+            twoSideMotors();
             telemetry.update();
         }
 
@@ -206,6 +208,20 @@ public class CompPrep extends LinearOpMode {
         frontRightMotor.setPower(frontRightPower);
         backRightMotor.setPower(backRightPower);
     }
+    private void twoSideMotors() {
+        if (gamepad1.a){
+            leftServo.setPower(-1);
+            rightServo.setPower(-1);
+        }
+        if (gamepad1.b){
+            leftServo.setPower(1);
+            rightServo.setPower(1);
+        }
+        if (gamepad1.y){
+            leftServo.setPower(0);
+            rightServo.setPower(0);
+        }
+    }
 
     private void initializeMotors() {
         frontLeftMotor = hardwareMap.dcMotor.get("frontLeft");
@@ -213,7 +229,10 @@ public class CompPrep extends LinearOpMode {
         frontRightMotor = hardwareMap.dcMotor.get("frontRight");
         backRightMotor = hardwareMap.dcMotor.get("backRight");
         outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-        intake = hardwareMap.crservo.get("intake");
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
+       // intake = hardwareMap.dcMotor.get("intake");
+        leftServo = hardwareMap.crservo.get("leftServo");
+        rightServo = hardwareMap.crservo.get("rightServo");
 
         // Assign the FIELD (no "Limelight3A" in front), so the other methods can use it
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
@@ -221,7 +240,7 @@ public class CompPrep extends LinearOpMode {
         limelight.pipelineSwitch(0);
         limelight.start();
 
-        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);
