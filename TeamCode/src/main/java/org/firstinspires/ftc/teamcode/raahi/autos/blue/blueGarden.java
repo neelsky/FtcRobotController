@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -76,6 +77,8 @@ public class blueGarden extends LinearOpMode {
 
     double distanceToTarget = 0;
 
+    private ElapsedTime time = new ElapsedTime();
+
     @Override
     public void runOpMode() {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
@@ -88,6 +91,7 @@ public class blueGarden extends LinearOpMode {
 
         waitForStart();
         limelight.start();
+        time.reset();
 
 
 
@@ -114,6 +118,12 @@ public class blueGarden extends LinearOpMode {
         drive(0,0,0, false);
 
         turn(30);
+
+        double mstime = time.milliseconds();
+        double time = mstime / 1000;
+
+        telemetry.addData("Match Time", "%.2f", time);
+        telemetry.update();
 
         limelight.stop();
     }

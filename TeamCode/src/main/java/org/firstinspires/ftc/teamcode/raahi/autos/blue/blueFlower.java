@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -8,7 +9,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.CRServo;
 
@@ -76,11 +76,15 @@ public class blueFlower extends LinearOpMode {
 
     double distanceToTarget = 0;
 
+    private ElapsedTime time = new ElapsedTime();
+
     @Override
     public void runOpMode() {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.setPollRateHz(100);
         limelight.pipelineSwitch(aprilTagPipeline);
+
+
 
         initializeMotors();
         setUpOdometry();
@@ -88,6 +92,7 @@ public class blueFlower extends LinearOpMode {
 
         waitForStart();
         limelight.start();
+        time.reset();
 
 
 
@@ -114,6 +119,13 @@ public class blueFlower extends LinearOpMode {
         drive(0,0,0, false);
 
         turn(30);
+
+        ;
+        double mstime = time.milliseconds();
+        double time = mstime / 1000;
+
+        telemetry.addData("Match Time", "%.2f", time);
+        telemetry.update();
 
         limelight.stop();
     }
