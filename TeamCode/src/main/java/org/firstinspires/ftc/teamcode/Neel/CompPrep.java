@@ -26,12 +26,15 @@ public class CompPrep extends LinearOpMode {
     public static double AIM_MAX_TURN = 0.4;   // max turn power while aiming
     public static double AIM_TOLERANCE = 1.0;  // degrees: close enough = aimed
 
+    private CRServo transfer;
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
     private DcMotorEx outtake;
-    private CRServo intake;
+    private DcMotorEx intake;
+    private CRServo rightServo;
+    private CRServo leftServo;
     private Limelight3A limelight;
 
     int goalVelocity = 0;
@@ -61,7 +64,7 @@ public class CompPrep extends LinearOpMode {
             runOuttakeMotor();
             checkIfShooting();
             checkToResetState();
-
+            twoSideMotors();
             telemetry.update();
         }
 
@@ -89,7 +92,7 @@ public class CompPrep extends LinearOpMode {
     }
 
     private void checkToResetState() {
-        // Try to stop anything that isn't responding to other commands.
+
         if (gamepad1.right_bumper) {
             goalVelocity = 0;
             outtake.setPower(0);
@@ -124,7 +127,7 @@ public class CompPrep extends LinearOpMode {
         outtake.setVelocity(goalVelocity);
     }
 
-    /** Distance in inches from the camera to the tag, or -1 if it isn't visible. */
+
     private double getDistanceToTag(int tagId) {
         LLResultTypes.FiducialResult tag = findTag(tagId);
         if (tag == null) {
@@ -138,7 +141,7 @@ public class CompPrep extends LinearOpMode {
         return Math.sqrt(x * x + y * y + z * z);
     }
 
-    /** Left/right angle to the tag in degrees (0 = centered), or 0 if it isn't visible. */
+
     private double getAngleToTag(int tagId) {
         LLResultTypes.FiducialResult tag = findTag(tagId);
         if (tag == null) {
@@ -147,7 +150,6 @@ public class CompPrep extends LinearOpMode {
         return tag.getTargetXDegrees();
     }
 
-    /** Finds the tag with this ID in the latest Limelight result, or null if not seen. */
     private LLResultTypes.FiducialResult findTag(int tagId) {
         LLResult result = limelight.getLatestResult();
         if (result == null || !result.isValid()) {
@@ -206,6 +208,32 @@ public class CompPrep extends LinearOpMode {
         frontRightMotor.setPower(frontRightPower);
         backRightMotor.setPower(backRightPower);
     }
+    private void twoSideMotors() {
+        if (gamepad1.a){
+            leftServo.setPower(-1);
+            rightServo.setPower(-1);
+        }
+        if (gamepad1.b){
+            leftServo.setPower(1);
+            rightServo.setPower(1);
+        }
+        if (gamepad1.y){
+            leftServo.setPower(0);
+            rightServo.setPower(0);
+        }
+    }
+
+    private void RunIntakemotor() {
+        if (gamepad1.dpad_up) {
+            intake.setPower(0.5);
+        }
+        if (gamepad1.dpad_down) {
+            intake.setPower(-0.5);
+        }
+        if (gamepad1.dpad_left) {
+            intake.setPower(0);
+        }
+    }
 
     private void initializeMotors() {
         frontLeftMotor = hardwareMap.dcMotor.get("frontLeft");
@@ -213,15 +241,19 @@ public class CompPrep extends LinearOpMode {
         frontRightMotor = hardwareMap.dcMotor.get("frontRight");
         backRightMotor = hardwareMap.dcMotor.get("backRight");
         outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-        intake = hardwareMap.crservo.get("intake");
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
+        transfer =  hardwareMap.crservo.get("transfer");
 
-        // Assign the FIELD (no "Limelight3A" in front), so the other methods can use it
+        leftServo = hardwareMap.crservo.get("leftServo");
+        rightServo = hardwareMap.crservo.get("rightServo");
+
+
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
         limelight.pipelineSwitch(0);
         limelight.start();
 
-        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);
@@ -243,15 +275,6 @@ public class CompPrep extends LinearOpMode {
         telemetry.update();
     }
 
-    private void RunIntakemotor() {
-        if (gamepad1.dpad_up) {
-            intake.setPower(1);
-        }
-        if (gamepad1.dpad_down) {
-            intake.setPower(-1);
-        }
-        if (gamepad1.dpad_left) {
-            intake.setPower(0);
-        }
-    }
+
 }
+
