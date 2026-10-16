@@ -26,10 +26,10 @@ public class blueFlower extends LinearOpMode {
 
 
     //PLACEHOLDERS
-    double xoffset;
+    double xoffset = 25.4;
 
     //need to measure offset in mm
-    double yoffset;
+    double yoffset = -127;
 
     private DcMotorEx outtake;
 
@@ -47,13 +47,28 @@ public class blueFlower extends LinearOpMode {
     static final double distanceOffset   = 0.002;
     static final double headingOffset    = 1.5;
 
+    static final double vBase = 941.2069;
+    static final double vScale = 0.4127235;
+    static final double vExponent = 1.4620166;
+    static final double vOffset = 147;
+
+
+
+    static final double aimToleranceDeg = 1.5;
+    static final double aimKp = 0.02;
+    static final double minAimPower = 0.12;
+    static final double maxAimPower = 0.4;
+    static final double aimOut = 1.5;
+
+    static final double driveTimeSec = 1.5;
+    static final double driveMmPerSec = 600;
+    static final double driveOffsetForTime = 2.0;
+
     static final double maxTurnPower = 0.5;
 
     static final double minTurnPower = 0.15;
 
-    double currentX;
-    double currentY;
-    double currentHeading;
+
 
     public static double NEW_P = 7.0;
     public static double NEW_I = 0.0;
@@ -96,29 +111,49 @@ public class blueFlower extends LinearOpMode {
 
 
 
-        /*while (opModeIsActive()) {
-            LLResultTypes.FiducialResult upTag = findUpTag();
-            if(upTag != null){
-                setGoalVelocity(upTag);
-                runOuttakeMotor();
-            }else{
-                goalVelocity = 0;
-                outtake.setVelocity(0);
 
-            }
-        }*/
+        goalVelocity = velocityForDistance(100);
+        outtake.setVelocity(goalVelocity);
+        drive(500,500,0,false);
+        aim();
+        LLResultTypes.FiducialResult upTag = findUpTag();
+        if(upTag != null){
+            setGoalVelocity(upTag);
+            runOuttakeMotor();
+        }else{
+            goalVelocity = 0;
+            outtake.setVelocity(0);
 
-        drive(2000,0,0, false);
-        sleep(1000);
-        drive(0,2000,0, true);
+        }
+        ElapsedTime t = new ElapsedTime();
+        while (opModeIsActive() && t.seconds() < 2.0) {
+            outtake.setVelocity(goalVelocity);
+            if (Math.abs(outtake.getVelocity() - goalVelocity) < goalVelocity * 0.02) break;
+        }
 
-        sleep(1000);
-        drive(2000,2000,0, true);
 
-        sleep(1000);
-        drive(0,0,0, false);
+        leftIntake.setPower(0.3);
+        rightIntake.setPower(0.3);
+        mainIntake.setPower(1);
+        t.reset();
+        while (opModeIsActive() && t.seconds() < 2.0) {
+            outtake.setVelocity(goalVelocity);
+        }
 
-        turn(30);
+        setPower(0, 0, 0);
+        outtake.setVelocity(0);
+        limelight.stop();
+        mainIntake.setPower(0);
+        leftIntake.setPower(0);
+        rightIntake.setPower(0);
+
+
+
+
+
+
+
+
 
         ;
         double mstime = time.milliseconds();
@@ -127,7 +162,6 @@ public class blueFlower extends LinearOpMode {
         telemetry.addData("Match Time", "%.2f", time);
         telemetry.update();
 
-        limelight.stop();
     }
 
 
@@ -171,14 +205,18 @@ public class blueFlower extends LinearOpMode {
         telemetry.addData("distance", "%.1f in", distanceToTarget);
 
         if (distanceToTarget > 40 && distanceToTarget < 140) {
-            goalVelocity = (int) (941.2069 + 0.4127235 * Math.pow(distanceToTarget, 1.4620166) + 147);
+            goalVelocity = velocityForDistance(distanceToTarget);
             telemetry.addData("goalVelocity", goalVelocity);
         }
     }
 
+    private int velocityForDistance(double inches) {
+        return (int) (vBase + vScale * Math.pow(inches, vExponent) + vOffset);
+    }
+
     private void runOuttakeMotor() {
          double currentVelocity = outtake.getVelocity();
-        telemetry.addData("curVelocity", currentVelocity);
+        telemetry.addData("currentVelocity", currentVelocity);
 
         minRange = goalVelocity - (goalVelocity * range);
         maxRange = goalVelocity;
@@ -263,6 +301,35 @@ public class blueFlower extends LinearOpMode {
         drive(p.getX(DistanceUnit.MM), p.getY(DistanceUnit.MM), Math.toRadians(degrees), false);   // >>> ADDED: target = current x,y so atPosition is true immediately and only the heading part runs. toRadians because drive() works in radians.
     }
 
+    private boolean aim(){
+        ElapsedTime aimTimer = new ElapsedTime();
+
+        while(opModeIsActive() && aimTimer.seconds() < aimOut){
+            LLResultTypes.FiducialResult tag = findUpTag();
+            if (tag == null) {
+                setPower(0, 0, 0);
+                continue;
+
+            }
+            double tagX = tag.getTargetXDegrees();
+
+            if (Math.abs(tagX) < aimToleranceDeg) {   // >>> ADDED: close enough to centered
+                setPower(0, 0, 0);   // >>> ADDED: stop turning
+                return true;   // >>> ADDED: success
+            }
+
+            double turn = tagX * aimKp;
+            if (Math.abs(turn) < minAimPower) {
+                turn = Math.signum(turn) * minAimPower;
+            }
+            turn = Math.max(-maxAimPower, Math.min(maxAimPower, turn));
+            setPower(0, 0, turn);
+
+        }
+        setPower(0, 0, 0);
+        return false;
+    }
+
     private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper){
 
         if(intakeHelper){
@@ -275,19 +342,34 @@ public class blueFlower extends LinearOpMode {
             mainIntake.setPower(0);
         }
 
+        double timeout = Double.MAX_VALUE;
+        boolean firstTime = true;
+        ElapsedTime driveTimer = new ElapsedTime();
 
-        while(opModeIsActive()){
+
+        while(opModeIsActive() &&  driveTimer.seconds() < timeout){
             odometry.update();
             Pose2D currentPosition = odometry.getPosition();
             double currentX = currentPosition.getX(DistanceUnit.MM);
             double currentY = currentPosition.getY(DistanceUnit.MM);
             double currentHeading = currentPosition.getHeading(AngleUnit.RADIANS);
+            telemetry.addData("currentX", currentX);
+            telemetry.addData("currentY", currentY);
+            telemetry.addData("currentHeading", currentHeading);
+            telemetry.update();
+
 
 
             double xError = targetX - currentX;
             double yError = targetY - currentY;
             double headingError = turnAngle(targetHeading - currentHeading);
             double neededDistance = Math.hypot(xError, yError);
+
+            if (firstTime) {
+                timeout = driveTimeSec + (neededDistance / driveMmPerSec) * driveOffsetForTime;
+                driveTimer.reset();
+                firstTime = false;
+            }
 
 
 
@@ -300,8 +382,10 @@ public class blueFlower extends LinearOpMode {
             double speedY = 0;
 
             if (!atPosition) {
-                double forwardErr =  xError * Math.cos(currentHeading) + yError * Math.sin(currentHeading);
-                double leftErr = -xError * Math.sin(currentHeading) + yError * Math.cos(currentHeading);
+                double cos = Math.cos(currentHeading);
+                double sin = Math.sin(currentHeading);
+                double forwardErr =  xError * cos + yError * sin;
+                double leftErr = -xError * sin + yError * cos;
                 double speed = Math.max(minPower, Math.min(maxPower, neededDistance * distanceOffset));
                 speedX = (forwardErr / neededDistance) * speed;
                 speedY = (leftErr / neededDistance) * speed;
