@@ -209,6 +209,7 @@ public class CompPrep extends LinearOpMode {
         backRightMotor.setPower(backRightPower);
     }
     private void twoSideMotors() {
+
         if (gamepad1.a){
             leftServo.setPower(-1);
             rightServo.setPower(-1);
@@ -272,7 +273,7 @@ public class CompPrep extends LinearOpMode {
                 "P=%.6f I=%.6f D=%.6f F=%.6f",
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.addLine("Ready. Press START.");
-        telemetry.update();
+        telemetry.update();//lal
     }
 
 
