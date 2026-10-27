@@ -8,159 +8,197 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 
 @TeleOp(name = "Comp Prep", group = "Glitch")
 public class CompPrep extends LinearOpMode {
-    private static final int TARGET_TAG_ID = 8;   // the tag you aim/shoot at
 
-    public static double NEW_P = 7.0;
-    public static double NEW_I = 0.0;
-    public static double NEW_D = 0.0;
-    public static double NEW_F = 15.0;
+    public static double SHOOTER_KF = 0.00042;
+    public static int DEFAULT_VELOCITY = 1500;
+    public static int MAX_VELOCITY = 2200;
 
-    // Auto-aim tuning
-    public static double AIM_KP = 0.02;        // turn power per degree off target
-    public static double AIM_MAX_TURN = 0.4;   // max turn power while aiming
-    public static double AIM_TOLERANCE = 1.0;  // degrees: close enough = aimed
+    public static double READY_AT = 0.97;
+    public static double DROP_FROM_PEAK = 0.03;
+    public static double MIN_PAUSE_MS = 150;
+    public static double MAX_PAUSE_MS = 500;
+    public static double SPIN_UP_MS = 1200;
+    public static double TRANSFER_POWER = 1.0;
 
-    private CRServo transfer;
+    public static double TAG_HOLD_MS = 300;
+
+    public static double AIM_KP = 0.02;
+    public static double AIM_MAX_TURN = 0.4;
+    public static double AIM_TOLERANCE = 2.0;
+    public static double AIM_MIN_TURN = 0.08;
+
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
     private DcMotorEx outtake;
     private DcMotorEx intake;
+    private CRServo transfer;
     private CRServo rightServo;
     private CRServo leftServo;
     private Limelight3A limelight;
 
-    int goalVelocity = 0;
-    double range = 0.02;
-    double minRange = 0;
-    double maxRange = 0;
+    private final ElapsedTime lastSeenTimer = new ElapsedTime();
+    private final ElapsedTime pauseTimer = new ElapsedTime();
+    private final ElapsedTime fullPowerTimer = new ElapsedTime();
+    private final ElapsedTime spinUpTimer = new ElapsedTime();
 
-    double distanceToTarget = 0;
+    boolean tagVisible = false;
+    int tagId = -1;
+    double distanceToTarget = -1;
     double angleToTarget = 0;
+
+    int goalVelocity = 0;
     double currentVelocity = 0;
+    double peakVelocity = 0;
 
     boolean isShooting = false;
-    boolean isAtGoalVelocity = false;
-    boolean shooterNeedsReset = false;
+    boolean isFeeding = false;
     boolean isAimedAtTarget = false;
 
     @Override
     public void runOpMode() throws InterruptedException {
-        initializeMotors();   // runs ONCE, before start
+        initializeMotors();
 
         waitForStart();
+        lastSeenTimer.reset();
+        pauseTimer.reset();
 
         while (opModeIsActive()) {
-            RunIntakemotor();
-            doDriving();
+            updateVision();
+            checkIfShooting();
             setGoalVelocity();
             runOuttakeMotor();
-            checkIfShooting();
-            checkToResetState();
+            runTransfer();
+            doDriving();
+            RunIntakemotor();
             twoSideMotors();
+            checkToResetState();
             telemetry.update();
         }
 
+        outtake.setPower(0);
+        transfer.setPower(0);
         limelight.stop();
     }
 
-    private void setGoalVelocity() {
-        int tempVelocity = goalVelocity;
-        distanceToTarget = getDistanceToTag(TARGET_TAG_ID);
-        telemetry.addData("distance", "%.1f in", distanceToTarget);
+    private void updateVision() {
+        LLResult result = limelight.getLatestResult();
+        LLResultTypes.FiducialResult best = null;
 
-        if (distanceToTarget > 40 && distanceToTarget < 140) {
-            tempVelocity = (int) (941.2069 + 0.4127235 * Math.pow(distanceToTarget, 1.4620166) + 147);
-            telemetry.addData("tempVelocity", tempVelocity);
+        if (result != null && result.isValid()) {
+            for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
+                if (isTargetTag(tag.getFiducialId())
+                        && (best == null || tag.getTargetArea() > best.getTargetArea())) {
+                    best = tag;
+                }
+            }
         }
 
-        if (isShooting && !shooterNeedsReset) {
-            goalVelocity = tempVelocity;
-        } else {
-            telemetry.addData("isShooting", isShooting);
-            telemetry.addData("shooterNeedsReset", shooterNeedsReset);
+        if (best != null) {
+            Position pos = best.getTargetPoseCameraSpace().getPosition();
+            double x = pos.unit.toInches(pos.x);
+            double y = pos.unit.toInches(pos.y);
+            double z = pos.unit.toInches(pos.z);
+            double dist = Math.sqrt(x * x + y * y + z * z);
+
+            if (dist > 1) {
+                distanceToTarget = dist;
+            }
+            angleToTarget = dist > 100 ? best.getTargetXDegrees() - 2 : best.getTargetXDegrees();
+            tagId = best.getFiducialId();
+            tagVisible = true;
+            lastSeenTimer.reset();
+        } else if (lastSeenTimer.milliseconds() > TAG_HOLD_MS) {
+            tagVisible = false;
+            tagId = -1;
+            distanceToTarget = -1;
+        }
+
+        telemetry.addData("tag", tagVisible ? String.valueOf(tagId) : "not seen");
+        telemetry.addData("distance", "%.1f in", distanceToTarget);
+        telemetry.addData("angle", "%.1f°", angleToTarget);
+    }
+
+    private boolean isTargetTag(int id) {
+        return id >= 38 && id <= 45;
+    }
+
+    private void checkIfShooting() {
+        isShooting = gamepad1.right_trigger > 0.1;
+    }
+
+    private void setGoalVelocity() {
+        if (!isShooting) {
+            goalVelocity = 0;
+        } else if (tagVisible && distanceToTarget > 40 && distanceToTarget < 140) {
+            int fromDistance = (int) (930);
+            goalVelocity = Math.min(fromDistance, MAX_VELOCITY);
+        } else if (goalVelocity == 0) {
+            goalVelocity = Math.min(DEFAULT_VELOCITY, MAX_VELOCITY);
         }
 
         telemetry.addData("goalVelocity", goalVelocity);
     }
 
-    private void checkToResetState() {
-
-        if (gamepad1.right_bumper) {
-            goalVelocity = 0;
-            outtake.setPower(0);
-            intake.setPower(0);
-        }
-    }
-
-    private void checkIfShooting() {
-        // To shoot, hold down the left_trigger.
-        if (gamepad1.left_trigger > 0 && !shooterNeedsReset) {
-            isShooting = true;
-        } else if (gamepad1.left_trigger == 0) {
-            isShooting = false;
-            shooterNeedsReset = false;
-        }
-    }
-
     private void runOuttakeMotor() {
-        currentVelocity = outtake.getVelocity();
-        telemetry.addData("curVelocity", currentVelocity);
+        currentVelocity = Math.abs(outtake.getVelocity());
 
-        minRange = goalVelocity - (goalVelocity * range);
-        maxRange = goalVelocity;
+        double power = 0;
+        if (goalVelocity > 0) {
+            power = currentVelocity < goalVelocity ? 1 : Math.min(1, SHOOTER_KF * goalVelocity);
+        }
+        outtake.setPower(power);
 
-        isAtGoalVelocity = (currentVelocity <= maxRange) && (currentVelocity > minRange);
-        telemetry.addData("isAtGoalVelocity", isAtGoalVelocity);
+        if (power < 1) {
+            fullPowerTimer.reset();
+        }
 
-        if (isAtGoalVelocity) {
+        telemetry.addData("curVelocity", "%.0f", currentVelocity);
+        telemetry.addData("outtakePower", "%.2f", power);
+        if (fullPowerTimer.seconds() > 2) {
+            telemetry.addLine("Flywheel can't reach goal: lower MAX_VELOCITY");
+        }
+    }
+
+    private void runTransfer() {
+        if (gamepad1.left_trigger > 0.1) {
+            isFeeding = false;
+            transfer.setPower(TRANSFER_POWER);
+            telemetry.addData("transfer", "MANUAL");
             return;
         }
 
-        outtake.setVelocity(goalVelocity);
-    }
-
-
-    private double getDistanceToTag(int tagId) {
-        LLResultTypes.FiducialResult tag = findTag(tagId);
-        if (tag == null) {
-            return -1;
-        }
-
-        Position pos = tag.getTargetPoseCameraSpace().getPosition();
-        double x = pos.unit.toInches(pos.x);
-        double y = pos.unit.toInches(pos.y);
-        double z = pos.unit.toInches(pos.z);
-        return Math.sqrt(x * x + y * y + z * z);
-    }
-
-
-    private double getAngleToTag(int tagId) {
-        LLResultTypes.FiducialResult tag = findTag(tagId);
-        if (tag == null) {
-            return 0;
-        }
-        return tag.getTargetXDegrees();
-    }
-
-    private LLResultTypes.FiducialResult findTag(int tagId) {
-        LLResult result = limelight.getLatestResult();
-        if (result == null || !result.isValid()) {
-            return null;
-        }
-        for (LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
-            if (tag.getFiducialId() == tagId) {
-                return tag;
+        if (!isShooting || goalVelocity <= 0) {
+            isFeeding = false;
+            peakVelocity = 0;
+            spinUpTimer.reset();
+        } else if (isFeeding) {
+            peakVelocity = Math.max(peakVelocity, currentVelocity);
+            boolean dropped = currentVelocity < peakVelocity * (1 - DROP_FROM_PEAK);
+            if (dropped) {
+                isFeeding = false;
+                pauseTimer.reset();
+            }
+        } else {
+            boolean atSpeed = currentVelocity >= goalVelocity * READY_AT;
+            boolean spunUp = spinUpTimer.milliseconds() >= SPIN_UP_MS;
+            boolean pausedLongEnough = pauseTimer.milliseconds() >= MAX_PAUSE_MS;
+            boolean ready = atSpeed || (spunUp && pausedLongEnough);
+            if (ready && pauseTimer.milliseconds() >= MIN_PAUSE_MS) {
+                isFeeding = true;
+                peakVelocity = currentVelocity;
             }
         }
-        return null;
+
+        transfer.setPower(isFeeding ? TRANSFER_POWER : 0);
+        telemetry.addData("transfer", isFeeding ? "FEEDING" : "waiting");
     }
 
     private void doDriving() {
@@ -168,57 +206,38 @@ public class CompPrep extends LinearOpMode {
         double x = gamepad1.left_stick_x * 1.1;
         double rx = gamepad1.right_stick_x;
 
-        double dist = getDistanceToTag(TARGET_TAG_ID);
-        boolean tagVisible = dist >= 0;
-
-        if (!tagVisible) {
-            telemetry.addData("angle", "tag not seen");
-        } else {
-            if (dist > 100) {
-                angleToTarget = getAngleToTag(TARGET_TAG_ID) - 2;
-            } else {
-                angleToTarget = getAngleToTag(TARGET_TAG_ID);
-            }
-            telemetry.addData("angle", "%.1f°", angleToTarget);
-        }
-
-        // Auto-aim: while holding the shoot trigger and the tag is visible,
-        // the robot turns itself toward the tag (replaces the right stick turn).
-        boolean autoAiming = gamepad1.left_trigger > 0 && tagVisible;
+        boolean autoAiming = isShooting && tagVisible;
         if (autoAiming) {
             if (Math.abs(angleToTarget) > AIM_TOLERANCE) {
                 rx = angleToTarget * AIM_KP;
+                if (Math.abs(rx) < AIM_MIN_TURN) {
+                    rx = Math.signum(rx) * AIM_MIN_TURN;
+                }
                 rx = Math.max(-AIM_MAX_TURN, Math.min(AIM_MAX_TURN, rx));
             } else {
                 rx = 0;
             }
         }
         isAimedAtTarget = tagVisible && Math.abs(angleToTarget) <= AIM_TOLERANCE;
-        telemetry.addData("autoAiming", autoAiming);
         telemetry.addData("isAimedAtTarget", isAimedAtTarget);
 
         double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-        double frontLeftPower = (y + x + rx) / denominator;
-        double backLeftPower = (y - x + rx) / denominator;
-        double frontRightPower = (y - x - rx) / denominator;
-        double backRightPower = (y + x - rx) / denominator;
-
-        frontLeftMotor.setPower(frontLeftPower);
-        backLeftMotor.setPower(backLeftPower);
-        frontRightMotor.setPower(frontRightPower);
-        backRightMotor.setPower(backRightPower);
+        frontLeftMotor.setPower((y + x + rx) / denominator);
+        backLeftMotor.setPower((y - x + rx) / denominator);
+        frontRightMotor.setPower((y - x - rx) / denominator);
+        backRightMotor.setPower((y + x - rx) / denominator);
     }
-    private void twoSideMotors() {
 
-        if (gamepad1.a){
+    private void twoSideMotors() {
+        if (gamepad1.a) {
             leftServo.setPower(-1);
             rightServo.setPower(-1);
         }
-        if (gamepad1.b){
+        if (gamepad1.b) {
             leftServo.setPower(1);
             rightServo.setPower(1);
         }
-        if (gamepad1.y){
+        if (gamepad1.y) {
             leftServo.setPower(0);
             rightServo.setPower(0);
         }
@@ -236,6 +255,16 @@ public class CompPrep extends LinearOpMode {
         }
     }
 
+    private void checkToResetState() {
+        if (gamepad1.right_bumper) {
+            goalVelocity = 0;
+            isFeeding = false;
+            outtake.setPower(0);
+            intake.setPower(0);
+            transfer.setPower(0);
+        }
+    }
+
     private void initializeMotors() {
         frontLeftMotor = hardwareMap.dcMotor.get("frontLeft");
         backLeftMotor = hardwareMap.dcMotor.get("backLeft");
@@ -243,39 +272,33 @@ public class CompPrep extends LinearOpMode {
         backRightMotor = hardwareMap.dcMotor.get("backRight");
         outtake = hardwareMap.get(DcMotorEx.class, "outtake");
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        transfer =  hardwareMap.crservo.get("transfer");
-
+        transfer = hardwareMap.crservo.get("transfer");
         leftServo = hardwareMap.crservo.get("leftServo");
         rightServo = hardwareMap.crservo.get("rightServo");
-
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
         limelight.pipelineSwitch(0);
         limelight.start();
 
-        frontLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        leftServo.setDirection(CRServo.Direction.REVERSE);
+        outtake.setDirection(DcMotorEx.Direction.REVERSE);
 
         frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         frontRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backRightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // setVelocity needs the encoder mode
-        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        outtake.setVelocityPIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
+        outtake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        outtake.setPower(0);
+        transfer.setPower(0);
 
-        PIDFCoefficients pidfValues = outtake.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-        telemetry.addData("Flywheel PIDF",
-                "P=%.6f I=%.6f D=%.6f F=%.6f",
-                pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.addLine("Ready. Press START.");
-        telemetry.update();//lal
+        telemetry.update();
     }
-
-
 }
-
