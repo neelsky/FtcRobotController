@@ -85,10 +85,12 @@ public class motordebug extends LinearOpMode {
             intake.setPower(0.5);
         }
         if(gamepad1.dpad_left){
-            outtake.setPower(0.8);
+//            outtake.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//            outtake.setVelocity(103);
+            outtake.setPower(0.5);
         }
         if(gamepad1.dpad_right){
-            outtake.setPower(-0.8);
+            outtake.setPower(-0.5);
         }
         if(gamepad1.right_bumper){
             outtake.setPower(0);
@@ -127,6 +129,7 @@ public class motordebug extends LinearOpMode {
         imu = hardwareMap.get(IMU.class, "imu");
         outtake = hardwareMap.dcMotor.get("outtake");
         transfer = hardwareMap.crservo.get("transfer");
+
 
 
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
