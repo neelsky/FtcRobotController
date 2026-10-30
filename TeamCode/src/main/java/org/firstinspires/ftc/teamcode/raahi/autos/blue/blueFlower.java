@@ -170,7 +170,7 @@ public class blueFlower extends LinearOpMode {
     private int velocityForDistance(double inches) {
         goalVelocity = 0;
         if (inches >= 40 && inches <= 140) {
-            int fromDistance = (int) Math.round(3.32 * distanceToTarget + 666);
+            int fromDistance = (int) Math.round(3.32 * inches + 666);
             goalVelocity = Math.min(fromDistance, 2200);
         } else {
             goalVelocity = 900;
@@ -355,7 +355,7 @@ public class blueFlower extends LinearOpMode {
 
 
             double turn = -headingError * headingOffset;
-            if (!atHeading && Math.abs(turn) < minTurnPower)turn = Math.signum(headingError) * minTurnPower;
+            if (!atHeading && Math.abs(turn) < minTurnPower) turn = Math.signum(turn) * minTurnPower;
             turn = Math.max(-maxTurnPower, Math.min(maxTurnPower, turn));
 
             setPower(speedX, speedY, turn);
