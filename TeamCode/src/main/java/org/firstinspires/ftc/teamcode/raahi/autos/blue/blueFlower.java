@@ -30,14 +30,14 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotorEx outtake;
 
-    private CRServo leftIntake;
-    private CRServo rightIntake;
-    private DcMotorEx mainIntake;
+    private CRServo leftServo;
+    private CRServo rightServo;
+    private DcMotorEx intake;
 
-    private CRServo feeder;
+    private CRServo transfer;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
-    private GoBildaPinpointDriver odometry;
+    private GoBildaPinpointDriver pinpoint;
 
     static final double goalXMM = 1447.8;
     static final double goalYMM = -406.4;
@@ -121,16 +121,16 @@ public class blueFlower extends LinearOpMode {
 
         waitForFlywheel(2.0);
 
-        feedBalls(4);
+        feedBalls(3);
 
         outtakeOn = false;
 
         setPower(0, 0, 0);
         outtake.setVelocity(0);
-        mainIntake.setPower(0);
-        leftIntake.setPower(0);
-        rightIntake.setPower(0);
-        feeder.setPower(0);
+        intake.setPower(0);
+        leftServo.setPower(0);
+        rightServo.setPower(0);
+        transfer.setPower(0);
 
         double matchTime = time.seconds();
         telemetry.addData("Match Time", "%.2f", matchTime);
@@ -139,16 +139,16 @@ public class blueFlower extends LinearOpMode {
 
 
     private double distanceToGoalInches() {
-        odometry.update();
-        Pose2D p = odometry.getPosition();
+        pinpoint.update();
+        Pose2D p = pinpoint.getPosition();
         double dx = goalXMM - p.getX(DistanceUnit.MM);
         double dy = goalYMM - p.getY(DistanceUnit.MM);
         return Math.hypot(dx, dy) / 25.4;
     }
 
     private double headingToGoal() {
-        odometry.update();
-        Pose2D p = odometry.getPosition();
+        pinpoint.update();
+        Pose2D p = pinpoint.getPosition();
         double dx = goalXMM - p.getX(DistanceUnit.MM);
         double dy = goalYMM - p.getY(DistanceUnit.MM);
         return Math.atan2(dy, dx);
@@ -220,15 +220,15 @@ public class blueFlower extends LinearOpMode {
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
 
-        frontLeft = hardwareMap.get(DcMotor.class, "frontleft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontright");
-        backLeft = hardwareMap.get(DcMotor.class, "backleft");
-        backRight = hardwareMap.get(DcMotor.class, "backright");
-        odometry = hardwareMap.get(GoBildaPinpointDriver.class, "odometry");
-        leftIntake = hardwareMap.get(CRServo.class, "leftIntake");
-        rightIntake = hardwareMap.get(CRServo.class, "rightIntake");
-        mainIntake = hardwareMap.get(DcMotorEx.class, "mainIntake");
-        feeder = hardwareMap.get(CRServo.class, "feeder");
+        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
+        backRight = hardwareMap.get(DcMotor.class, "backRight");
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+        leftServo = hardwareMap.get(CRServo.class, "leftServo");
+        rightServo = hardwareMap.get(CRServo.class, "rightServo");
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
+        transfer = hardwareMap.get(CRServo.class, "transfer");
 
 
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
@@ -236,7 +236,7 @@ public class blueFlower extends LinearOpMode {
         frontRight.setDirection(DcMotor.Direction.REVERSE);
         backRight.setDirection(DcMotor.Direction.FORWARD);
 
-        for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, mainIntake}){
+        for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, intake}){
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
@@ -244,20 +244,20 @@ public class blueFlower extends LinearOpMode {
     }
 
     private void setUpOdometry(){
-        odometry.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        odometry.setOffsets(xoffset, yoffset, DistanceUnit.MM);
-        odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        odometry.resetPosAndIMU();
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        pinpoint.setOffsets(xoffset, yoffset, DistanceUnit.MM);
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        pinpoint.resetPosAndIMU();
         sleep(300);
 
-        odometry.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
+        pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
                 AngleUnit.RADIANS, 0));
 
     }
 
     private void turn(double degrees){
-        odometry.update();
-        Pose2D p = odometry.getPosition();
+        pinpoint.update();
+        Pose2D p = pinpoint.getPosition();
         drive(p.getX(DistanceUnit.MM), p.getY(DistanceUnit.MM), Math.toRadians(degrees), false);
     }
 
@@ -267,8 +267,8 @@ public class blueFlower extends LinearOpMode {
         while (opModeIsActive() && aimTimer.seconds() < aimOut) {
 
             updateShooter();
-            odometry.update();
-            double currentHeading = odometry.getPosition().getHeading(AngleUnit.RADIANS);
+            pinpoint.update();
+            double currentHeading = pinpoint.getPosition().getHeading(AngleUnit.RADIANS);
             double headingError = turnAngle(headingToGoal() - currentHeading);
             double errorDeg = Math.toDegrees(headingError);
 
@@ -294,13 +294,13 @@ public class blueFlower extends LinearOpMode {
     private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper){
 
         if(intakeHelper){
-            leftIntake.setPower(0.3);
-            rightIntake.setPower(0.3);
-            mainIntake.setPower(1);
+            leftServo.setPower(0.3);
+            rightServo.setPower(0.3);
+            intake.setPower(1);
         }else{
-            leftIntake.setPower(0);
-            rightIntake.setPower(0);
-            mainIntake.setPower(0);
+            leftServo.setPower(0);
+            rightServo.setPower(0);
+            intake.setPower(0);
         }
 
         double timeout = Double.MAX_VALUE;
@@ -310,8 +310,8 @@ public class blueFlower extends LinearOpMode {
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
             updateShooter();
-            odometry.update();
-            Pose2D currentPosition = odometry.getPosition();
+            pinpoint.update();
+            Pose2D currentPosition = pinpoint.getPosition();
             double currentX = currentPosition.getX(DistanceUnit.MM);
             double currentY = currentPosition.getY(DistanceUnit.MM);
             double currentHeading = currentPosition.getHeading(AngleUnit.RADIANS);
@@ -362,9 +362,9 @@ public class blueFlower extends LinearOpMode {
         }
 
         setPower(0, 0, 0);
-        leftIntake.setPower(0);
-        rightIntake.setPower(0);
-        mainIntake.setPower(0);
+        leftServo.setPower(0);
+        rightServo.setPower(0);
+        intake.setPower(0);
         sleep(100);
 
 
@@ -404,25 +404,26 @@ public class blueFlower extends LinearOpMode {
 
     private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
-        leftIntake.setPower(0.3);
-        rightIntake.setPower(0.3);
-        mainIntake.setPower(0.72);
+        leftServo.setPower(0.3);
+        rightServo.setPower(0.3);
+        intake.setPower(0.72);
 
         for (int i = 0; i < count && opModeIsActive(); i++) {
 
-            feeder.setPower(0.6);
+            transfer.setPower(0.6);
             pause(timePerBall);
 
-            feeder.setPower(0);
+            transfer.setPower(0);
             updateShooter();
             if (i < count - 1) waitForFlywheel(0.5);
         }
 
-        feeder.setPower(0);
-        mainIntake.setPower(0);
-        leftIntake.setPower(0);
-        rightIntake.setPower(0);
+        transfer.setPower(0);
+        intake.setPower(0);
+        leftServo.setPower(0);
+        rightServo.setPower(0);
     }
+
 
 
 
