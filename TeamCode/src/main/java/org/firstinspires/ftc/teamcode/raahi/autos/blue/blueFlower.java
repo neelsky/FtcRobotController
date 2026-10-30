@@ -60,7 +60,7 @@ public class blueFlower extends LinearOpMode {
 
     static final int maxBalls = 4;
 
-    static final double aimSpinSign = 1; //TODO
+    static final double aimSpinSign = -1; //TODO
 
 
 
@@ -169,13 +169,13 @@ public class blueFlower extends LinearOpMode {
 
     private int velocityForDistance(double inches) {
         goalVelocity = 0;
-        if (distanceToTarget > 40 && distanceToTarget < 140) {
+        if (inches >= 40 && inches <= 140) {
             int fromDistance = (int) Math.round(3.32 * distanceToTarget + 666);
             goalVelocity = Math.min(fromDistance, 2200);
-        } else if (goalVelocity == 0) {
+        } else {
             goalVelocity = 900;
         }
-        return (int) (goalVelocity);
+        return (goalVelocity);
     }
 
     private boolean atGoalVelocity() {
@@ -231,9 +231,9 @@ public class blueFlower extends LinearOpMode {
         transfer = hardwareMap.get(CRServo.class, "transfer");
 
 
-        frontLeft.setDirection(DcMotor.Direction.FORWARD);
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
         backLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.REVERSE);
+        frontRight.setDirection(DcMotor.Direction.FORWARD);
         backRight.setDirection(DcMotor.Direction.FORWARD);
 
         for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, intake}){
@@ -354,7 +354,7 @@ public class blueFlower extends LinearOpMode {
             }
 
 
-            double turn = headingError * headingOffset;
+            double turn = -headingError * headingOffset;
             if (!atHeading && Math.abs(turn) < minTurnPower)turn = Math.signum(headingError) * minTurnPower;
             turn = Math.max(-maxTurnPower, Math.min(maxTurnPower, turn));
 
@@ -410,7 +410,7 @@ public class blueFlower extends LinearOpMode {
 
         for (int i = 0; i < count && opModeIsActive(); i++) {
 
-            transfer.setPower(0.6);
+            transfer.setPower(1);
             pause(timePerBall);
 
             transfer.setPower(0);
