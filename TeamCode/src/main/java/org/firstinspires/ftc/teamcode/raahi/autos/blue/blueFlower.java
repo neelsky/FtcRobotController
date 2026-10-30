@@ -2,9 +2,6 @@ package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -14,22 +11,22 @@ import com.qualcomm.robotcore.hardware.CRServo;
 
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
-import java.util.List;
+
 
 
 @Autonomous(name = "Blue Flower", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
-    //PLACEHOLDERS
-    double xoffset = 25.4;
 
-    //need to measure offset in mm
-    double yoffset = -127;
+    double xoffset = 8;
+
+
+    double yoffset = -48;
 
     private DcMotorEx outtake;
 
@@ -37,28 +34,42 @@ public class blueFlower extends LinearOpMode {
     private CRServo rightIntake;
     private DcMotorEx mainIntake;
 
+    private CRServo feeder;
+
     private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver odometry;
 
+    static final double goalXMM = 1447.8;
+    static final double goalYMM = -406.4;
+
+    static final double outtakeXOffsetIn = 0; // TODO: measure
+
+    static final double vTolerance = 0.03;
+
+
     static final double mmPerFoot   = 304.8;
     static final double mmErrorTolerance  = 25;
-    static final double maxPower     = 0.6;
-    static final double minPower     = 0.2;
-    static final double distanceOffset   = 0.002;
-    static final double headingOffset    = 1.5;
-
-    static final double vBase = 941.2069;
-    static final double vScale = 0.4127235;
-    static final double vExponent = 1.4620166;
-    static final double vOffset = 147;
+    static final double maxPower     = 0.6; //TODO
+    static final double minPower     = 0.2; //TODO
+    static final double distanceOffset   = 0.002; //TODO
+    static final double headingOffset    = 1.24; //TODO
 
 
 
-    static final double aimToleranceDeg = 1.5;
-    static final double aimKp = 0.02;
-    static final double minAimPower = 0.12;
-    static final double maxAimPower = 0.4;
-    static final double aimOut = 1.5;
+    static final double timePerBall = 0.6; //TODO
+
+    static final int maxBalls = 4;
+
+    static final double aimSpinSign = 1; //TODO
+
+
+
+
+    static final double aimToleranceDeg = 1.76; //TODO
+    static final double aimKp = 0.02; //TODO
+    static final double minAimPower = 0.12; //TODO
+    static final double maxAimPower = 0.4; //TODO
+    static final double aimOut = 1.5; //TODO
 
     static final double driveTimeSec = 1.5;
     static final double driveMmPerSec = 600;
@@ -77,15 +88,11 @@ public class blueFlower extends LinearOpMode {
 
     boolean isAtGoalVelocity = false;
 
-    double range = 0.02;
-    double minRange;
-    double maxRange;
+    boolean outtakeOn = false;
 
-    private static final int scoringSideTag = 40;
-    private static final int audienceSideTag = 44;
-    private static final int aprilTagPipeline = 0;
 
-    private Limelight3A limelight;
+
+
 
     int goalVelocity = 0;
 
@@ -95,163 +102,111 @@ public class blueFlower extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(100);
-        limelight.pipelineSwitch(aprilTagPipeline);
-
-
-
         initializeMotors();
         setUpOdometry();
 
-
         waitForStart();
-        limelight.start();
         time.reset();
 
+        outtakeOn = true;
+
+
+        drive(goalXMM, goalYMM - 762, 0, false);
 
 
 
-        goalVelocity = velocityForDistance(100);
-        outtake.setVelocity(goalVelocity);
-        drive(500,500,0,false);
+
         aim();
-        LLResultTypes.FiducialResult upTag = findUpTag();
-        if(upTag != null){
-            setGoalVelocity(upTag);
-            runOuttakeMotor();
-        }else{
-            goalVelocity = 0;
-            outtake.setVelocity(0);
-
-        }
-        ElapsedTime t = new ElapsedTime();
-        while (opModeIsActive() && t.seconds() < 2.0) {
-            outtake.setVelocity(goalVelocity);
-            if (Math.abs(outtake.getVelocity() - goalVelocity) < goalVelocity * 0.02) break;
-        }
 
 
-        leftIntake.setPower(0.3);
-        rightIntake.setPower(0.3);
-        mainIntake.setPower(1);
-        t.reset();
-        while (opModeIsActive() && t.seconds() < 2.0) {
-            outtake.setVelocity(goalVelocity);
-        }
+        waitForFlywheel(2.0);
+
+        feedBalls(4);
+
+        outtakeOn = false;
 
         setPower(0, 0, 0);
         outtake.setVelocity(0);
-        limelight.stop();
         mainIntake.setPower(0);
         leftIntake.setPower(0);
         rightIntake.setPower(0);
+        feeder.setPower(0);
 
-
-
-
-
-
-
-
-
-        ;
-        double mstime = time.milliseconds();
-        double time = mstime / 1000;
-
-        telemetry.addData("Match Time", "%.2f", time);
+        double matchTime = time.seconds();
+        telemetry.addData("Match Time", "%.2f", matchTime);
         telemetry.update();
-
     }
 
 
-    private LLResultTypes.FiducialResult findUpTag(){
-        LLResultTypes.FiducialResult upTag = null;
-        double upTagHeight = Double.NEGATIVE_INFINITY;
+    private double distanceToGoalInches() {
+        odometry.update();
+        Pose2D p = odometry.getPosition();
+        double dx = goalXMM - p.getX(DistanceUnit.MM);
+        double dy = goalYMM - p.getY(DistanceUnit.MM);
+        return Math.hypot(dx, dy) / 25.4;
+    }
 
-        LLResult result = limelight.getLatestResult();
-        if (result != null && result.isValid()) {
-            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
-
-            for (LLResultTypes.FiducialResult tag : tags) {
-                int id = tag.getFiducialId();
-                if (id != scoringSideTag && id != audienceSideTag) {
-                    continue;
-                }
-
-                double height = tagHeightInches(tag);
-                if (upTag == null || height > upTagHeight) {
-                    upTag = tag;
-                    upTagHeight = height;
-
-                }
-            }
-        }
-
-        if (upTag == null) {
-            telemetry.addData("Distance to hive", "no tag in view");
-        } else {
-            telemetry.addData("Distance to hive", "%.1f in", distanceToTagInches(upTag));
-        }
-        telemetry.update();
-        return upTag;
+    private double headingToGoal() {
+        odometry.update();
+        Pose2D p = odometry.getPosition();
+        double dx = goalXMM - p.getX(DistanceUnit.MM);
+        double dy = goalYMM - p.getY(DistanceUnit.MM);
+        return Math.atan2(dy, dx);
     }
 
 
 
-    private void setGoalVelocity(LLResultTypes.FiducialResult upTag) {
 
-        distanceToTarget = distanceToTagInches(upTag);
-        telemetry.addData("distance", "%.1f in", distanceToTarget);
 
-        if (distanceToTarget > 40 && distanceToTarget < 140) {
-            goalVelocity = velocityForDistance(distanceToTarget);
-            telemetry.addData("goalVelocity", goalVelocity);
-        }
-    }
 
-    private int velocityForDistance(double inches) {
-        return (int) (vBase + vScale * Math.pow(inches, vExponent) + vOffset);
-    }
-
-    private void runOuttakeMotor() {
-         double currentVelocity = outtake.getVelocity();
-        telemetry.addData("currentVelocity", currentVelocity);
-
-        minRange = goalVelocity - (goalVelocity * range);
-        maxRange = goalVelocity;
-
-        isAtGoalVelocity = (currentVelocity <= maxRange) && (currentVelocity > minRange);
-        telemetry.addData("isAtGoalVelocity", isAtGoalVelocity);
-
-        if (isAtGoalVelocity) {
-            return;
-        }
-
+    private void updateShooter() {
+        if (!outtakeOn) return;
+        distanceToTarget = distanceToGoalInches() + outtakeXOffsetIn;
+        double clamped = Math.max(40, Math.min(140, distanceToTarget));
+        goalVelocity = velocityForDistance(clamped);
         outtake.setVelocity(goalVelocity);
     }
 
+    private int velocityForDistance(double inches) {
+        goalVelocity = 0;
+        if (distanceToTarget > 40 && distanceToTarget < 140) {
+            int fromDistance = (int) Math.round(3.32 * distanceToTarget + 666);
+            goalVelocity = Math.min(fromDistance, 2200);
+        } else if (goalVelocity == 0) {
+            goalVelocity = 900;
+        }
+        return (int) (goalVelocity);
+    }
 
-    private double tagHeightInches(LLResultTypes.FiducialResult tag) {
-        Position p = tag.getTargetPoseRobotSpace().getPosition().toUnit(DistanceUnit.INCH);
-        return p.z;
+    private boolean atGoalVelocity() {
+        double v = outtake.getVelocity();
+        isAtGoalVelocity = Math.abs(v - goalVelocity) <= goalVelocity * vTolerance;
+        return isAtGoalVelocity;
+    }
+
+    private void waitForFlywheel(double timeoutSec) {
+        ElapsedTime t = new ElapsedTime();
+        while (opModeIsActive() && t.seconds() < timeoutSec) {
+            updateShooter();
+            telemetry.addData("dist (in)", "%.1f", distanceToTarget);
+            telemetry.addData("goalVelocity", goalVelocity);
+            telemetry.addData("currentVelocity", outtake.getVelocity());
+            telemetry.update();
+            if (atGoalVelocity()) break;
+        }
     }
 
 
-    private double distanceToTagInches(LLResultTypes.FiducialResult tag) {
-        Position p = tag.getTargetPoseCameraSpace().getPosition().toUnit(DistanceUnit.INCH);
-        return Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
-    }
+
 
     private void initializeMotors() {
         outtake = hardwareMap.get(DcMotorEx.class, "outtake");
 
 
 
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+
         telemetry.setMsTransmissionInterval(11);
-        limelight.pipelineSwitch(0);
-        limelight.start();
+
 
 
 
@@ -273,6 +228,7 @@ public class blueFlower extends LinearOpMode {
         leftIntake = hardwareMap.get(CRServo.class, "leftIntake");
         rightIntake = hardwareMap.get(CRServo.class, "rightIntake");
         mainIntake = hardwareMap.get(DcMotorEx.class, "mainIntake");
+        feeder = hardwareMap.get(CRServo.class, "feeder");
 
 
         frontLeft.setDirection(DcMotor.Direction.FORWARD);
@@ -293,38 +249,43 @@ public class blueFlower extends LinearOpMode {
         odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
         odometry.resetPosAndIMU();
         sleep(300);
+
+        odometry.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
+                AngleUnit.RADIANS, 0));
+
     }
 
-    private void turn(double degrees){   // >>> ADDED: whole method. drive() always goes to an ABSOLUTE position, so to turn in place we use the current position as the target.
-        odometry.update();   // >>> ADDED: refresh the position so we read where the robot is right now
-        Pose2D p = odometry.getPosition();   // >>> ADDED: current pose
-        drive(p.getX(DistanceUnit.MM), p.getY(DistanceUnit.MM), Math.toRadians(degrees), false);   // >>> ADDED: target = current x,y so atPosition is true immediately and only the heading part runs. toRadians because drive() works in radians.
+    private void turn(double degrees){
+        odometry.update();
+        Pose2D p = odometry.getPosition();
+        drive(p.getX(DistanceUnit.MM), p.getY(DistanceUnit.MM), Math.toRadians(degrees), false);
     }
 
-    private boolean aim(){
+    private boolean aim() {
         ElapsedTime aimTimer = new ElapsedTime();
 
-        while(opModeIsActive() && aimTimer.seconds() < aimOut){
-            LLResultTypes.FiducialResult tag = findUpTag();
-            if (tag == null) {
+        while (opModeIsActive() && aimTimer.seconds() < aimOut) {
+
+            updateShooter();
+            odometry.update();
+            double currentHeading = odometry.getPosition().getHeading(AngleUnit.RADIANS);
+            double headingError = turnAngle(headingToGoal() - currentHeading);
+            double errorDeg = Math.toDegrees(headingError);
+
+            telemetry.addData("aimErrorDeg", "%.2f", errorDeg);
+            telemetry.update();
+
+            if (Math.abs(errorDeg) < aimToleranceDeg) {
                 setPower(0, 0, 0);
-                continue;
-
-            }
-            double tagX = tag.getTargetXDegrees();
-
-            if (Math.abs(tagX) < aimToleranceDeg) {   // >>> ADDED: close enough to centered
-                setPower(0, 0, 0);   // >>> ADDED: stop turning
-                return true;   // >>> ADDED: success
+                return true;
             }
 
-            double turn = tagX * aimKp;
+            double turn = aimSpinSign * errorDeg * aimKp;
             if (Math.abs(turn) < minAimPower) {
                 turn = Math.signum(turn) * minAimPower;
             }
             turn = Math.max(-maxAimPower, Math.min(maxAimPower, turn));
             setPower(0, 0, turn);
-
         }
         setPower(0, 0, 0);
         return false;
@@ -348,6 +309,7 @@ public class blueFlower extends LinearOpMode {
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
+            updateShooter();
             odometry.update();
             Pose2D currentPosition = odometry.getPosition();
             double currentX = currentPosition.getX(DistanceUnit.MM);
@@ -431,6 +393,40 @@ public class blueFlower extends LinearOpMode {
         while (angleHelper < -Math.PI) angleHelper += 2 * Math.PI;
         return angleHelper;
     }
+
+    private void pause(double seconds) {
+        ElapsedTime waitTimer = new ElapsedTime();
+        while (opModeIsActive() && waitTimer.seconds() < seconds) {
+            updateShooter();
+            idle();
+        }
+    }
+
+    private void feedBalls(int count) {
+        count = Math.max(1, Math.min(maxBalls, count));
+        leftIntake.setPower(0.3);
+        rightIntake.setPower(0.3);
+        mainIntake.setPower(0.72);
+
+        for (int i = 0; i < count && opModeIsActive(); i++) {
+
+            feeder.setPower(0.6);
+            pause(timePerBall);
+
+            feeder.setPower(0);
+            updateShooter();
+            if (i < count - 1) waitForFlywheel(0.5);
+        }
+
+        feeder.setPower(0);
+        mainIntake.setPower(0);
+        leftIntake.setPower(0);
+        rightIntake.setPower(0);
+    }
+
+
+
+
 
 
 
