@@ -16,7 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 public class CompPrep extends LinearOpMode {
 
     public static double SHOOTER_KF = 0.00042;
-    public static int DEFAULT_VELOCITY = 1500;
+    public static int DEFAULT_VELOCITY = 900;
     public static int MAX_VELOCITY = 2200;
 
     public static double READY_AT = 0.97;
@@ -102,17 +102,25 @@ public class CompPrep extends LinearOpMode {
         }
 
         if (best != null) {
+            tagId = best.getFiducialId();
+
             Position pos = best.getTargetPoseCameraSpace().getPosition();
             double x = pos.unit.toInches(pos.x);
             double y = pos.unit.toInches(pos.y);
             double z = pos.unit.toInches(pos.z);
-            double dist = Math.sqrt(x * x + y * y + z * z);
 
-            if (dist > 1) {
-                distanceToTarget = dist;
+            if (z > 1) {
+                double aimX = x + getTagOffsetCm(tagId) / 2.54;
+                distanceToTarget = Math.sqrt(aimX * aimX + y * y + z * z);
+                angleToTarget = Math.toDegrees(Math.atan2(aimX, z));
+            } else {
+                angleToTarget = best.getTargetXDegrees();
             }
-            angleToTarget = dist > 100 ? best.getTargetXDegrees() - 2 : best.getTargetXDegrees();
-            tagId = best.getFiducialId();
+
+            if (distanceToTarget > 100) {
+                angleToTarget -= 2;
+            }
+
             tagVisible = true;
             lastSeenTimer.reset();
         } else if (lastSeenTimer.milliseconds() > TAG_HOLD_MS) {
@@ -130,6 +138,21 @@ public class CompPrep extends LinearOpMode {
         return id >= 38 && id <= 45;
     }
 
+    private double getTagOffsetCm(int id) {
+        switch (id) {
+            case 42:
+                return 17;
+            case 43:
+                return 7;
+            case 44:
+                return -7;
+            case 45:
+                return -17;
+            default:
+                return 0;
+        }
+    }
+
     private void checkIfShooting() {
         isShooting = gamepad1.right_trigger > 0.1;
     }
@@ -138,7 +161,7 @@ public class CompPrep extends LinearOpMode {
         if (!isShooting) {
             goalVelocity = 0;
         } else if (tagVisible && distanceToTarget > 40 && distanceToTarget < 140) {
-            int fromDistance = (int) (930);
+            int fromDistance = (int) Math.round(3.32 * distanceToTarget + 666);
             goalVelocity = Math.min(fromDistance, MAX_VELOCITY);
         } else if (goalVelocity == 0) {
             goalVelocity = Math.min(DEFAULT_VELOCITY, MAX_VELOCITY);
@@ -286,7 +309,7 @@ public class CompPrep extends LinearOpMode {
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);
         leftServo.setDirection(CRServo.Direction.REVERSE);
-        outtake.setDirection(DcMotorEx.Direction.REVERSE);
+
 
         frontLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         backLeftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
