@@ -18,11 +18,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.Position;
 
 
-
-
-@Autonomous(name = "Blue Flower", group = "Auto")
+@SuppressWarnings("unused")
+@Autonomous(name = "Blue Flower 2", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -39,6 +39,8 @@ public class blueFlower extends LinearOpMode {
     private DcMotorEx intake;
 
     private CRServo transfer;
+
+    private Limelight3A limelight;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver pinpoint;
@@ -68,7 +70,7 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    static final double timePerBall = 0.6; //TODO
+    static final double timePerBall = 1.08; //TODO
 
     static final int maxBalls = 4;
 
@@ -106,6 +108,9 @@ public class blueFlower extends LinearOpMode {
 
     public static final double pi = Math.PI;
 
+    public static final double parkXMM = 3.5 * tileLength;
+    public static final double parkYMM = 2 * tileLength;
+
 
 
 
@@ -114,10 +119,12 @@ public class blueFlower extends LinearOpMode {
 
     double distanceToTarget = 0;
 
-    private ElapsedTime time = new ElapsedTime();
+    private final ElapsedTime time = new ElapsedTime();
 
     @Override
     public void runOpMode() {
+        telemetry.addData("CODE VERSION", "RAAHI TEST OCT30");
+        telemetry.update();
         initializeMotors();
         setUpOdometry();
 
@@ -125,10 +132,6 @@ public class blueFlower extends LinearOpMode {
         time.reset();
 
         outtakeOn = true;
-
-
-
-
 
 
         aim();
@@ -140,14 +143,45 @@ public class blueFlower extends LinearOpMode {
 
         everythingOff();
 
-        drive(0,(tileLength * -1) - 240,pi/2, false);
-        drive(0,(tileLength * -1) - 340, pi/2, true);
-        drive(50,0,0,false);
-        outtakeOn = true;
-        aim();
-        waitForFlywheel(1.6);
-        feedBalls(4);
-        everythingOff();
+
+
+        drive(0,tileLength + 240,pi/2, false);
+        drive(0,tileLength + 340, pi/2, true);
+        LLResultTypes.FiducialResult upTag = findUpTag();
+        if(time.seconds() > 22){
+            drive(tileLength, tileLength, 0, true);
+            park();
+        }
+        if (upTag != null && upTag.getFiducialId() == firstTag) {
+            drive(50,0,0,false);
+            outtakeOn = true;
+            aim();
+            waitForFlywheel(1.2);
+            if(time.seconds() > 25){
+                drive(tileLength, tileLength, 0, true);
+                park();
+            }
+            feedBalls(4);
+            everythingOff();
+            drive(tileLength, tileLength, 0, false);
+            park();
+        } else if (upTag != null && upTag.getFiducialId() == secondTag) {
+            drive(tileLength,tileLength + 240, 0, false);
+            drive(4 * tileLength, tileLength + 240, 0, false);
+            drive((4 * tileLength) + 200, 0, pi, false);
+            outtakeOn = true;
+            aim();
+            waitForFlywheel(0.5);
+            if(time.seconds() > 27){
+                park();
+            }
+            feedBalls(4);
+            everythingOff();
+            park();
+
+        }
+
+
 
 
     }
@@ -158,7 +192,7 @@ public class blueFlower extends LinearOpMode {
         Pose2D p = pinpoint.getPosition();
         double dx = goalXMM - p.getX(DistanceUnit.MM);
         double dy = goalYMM - p.getY(DistanceUnit.MM);
-        return Math.hypot(dx, dy) / 25.4;
+        return Math.hypot(dx, dy) * 25.4;
     }
 
     private double headingToGoal() {
@@ -228,6 +262,11 @@ public class blueFlower extends LinearOpMode {
 
         outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         outtake.setVelocityPIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
+
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        telemetry.setMsTransmissionInterval(11);
+        limelight.pipelineSwitch(0);
+        limelight.start();
 
         PIDFCoefficients pidfValues = outtake.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
         telemetry.addData("Flywheel PIDF",
@@ -419,9 +458,9 @@ public class blueFlower extends LinearOpMode {
 
     private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
-        leftServo.setPower(0.3);
-        rightServo.setPower(0.3);
-        intake.setPower(0.72);
+        leftServo.setPower(-0.3);
+        rightServo.setPower(-0.3);
+        intake.setPower(-1);
 
         for (int i = 0; i < count && opModeIsActive(); i++) {
 
@@ -434,9 +473,9 @@ public class blueFlower extends LinearOpMode {
         }
 
         transfer.setPower(0);
-        intake.setPower(0);
         leftServo.setPower(0);
         rightServo.setPower(0);
+        intake.setPower(0);
     }
 
     private void everythingOff(){
@@ -448,6 +487,47 @@ public class blueFlower extends LinearOpMode {
         leftServo.setPower(0);
         rightServo.setPower(0);
         transfer.setPower(0);
+    }
+
+    private LLResultTypes.FiducialResult findUpTag(){
+        LLResultTypes.FiducialResult upTag = null;
+        double upTagHeight = Double.NEGATIVE_INFINITY;
+
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+
+            for (LLResultTypes.FiducialResult tag : tags) {
+                int id = tag.getFiducialId();
+                if (id != firstTag && id != secondTag) {
+                    continue;
+                }
+
+                double height = tagHeightInches(tag);
+                if (upTag == null || height > upTagHeight) {
+                    upTag = tag;
+                    upTagHeight = height;
+
+                }
+            }
+        }
+
+        if (upTag == null) {
+            telemetry.addData("Distance to hive", "no tag in view");
+        } else {
+            telemetry.addData("Distance to hive", "%.1f in");
+        }
+        telemetry.update();
+        return upTag;
+    }
+
+    private double tagHeightInches(LLResultTypes.FiducialResult tag) {
+        Position p = tag.getTargetPoseRobotSpace().getPosition().toUnit(DistanceUnit.INCH);
+        return p.z;
+    }
+
+    private void park(){
+        drive(parkXMM, parkYMM, 0, true);
     }
 
 
