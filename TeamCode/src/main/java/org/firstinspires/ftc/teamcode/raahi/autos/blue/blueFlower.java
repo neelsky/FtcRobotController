@@ -8,6 +8,10 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
+import java.util.List;
 
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -39,8 +43,16 @@ public class blueFlower extends LinearOpMode {
     private DcMotor frontLeft, frontRight, backLeft, backRight;
     private GoBildaPinpointDriver pinpoint;
 
-    static final double goalXMM = 1447.8;
-    static final double goalYMM = -406.4;
+
+    static final double goalXMM = 1270;
+    static final double goalYMM = 0;
+    static final double goalOneXMM = 1270;
+    static final double goalOneYMM = 0;
+    static final double goalTwoXMM = 2170;
+    static final double goalTwoYMM = 0;
+
+    static final int firstTag = 40;
+    static final int secondTag = 44;
 
     static final double outtakeXOffsetIn = 0; // TODO: measure
 
