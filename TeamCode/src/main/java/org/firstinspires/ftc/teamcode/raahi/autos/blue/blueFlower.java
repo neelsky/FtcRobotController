@@ -62,6 +62,8 @@ public class blueFlower extends LinearOpMode {
 
     static final double aimSpinSign = -1; //TODO
 
+    static final double tileLength = 584.2;
+
 
 
 
@@ -112,8 +114,7 @@ public class blueFlower extends LinearOpMode {
 
         outtakeOn = true;
 
-        drive(0,0,pi/2,false);
-        /*drive(goalXMM, goalYMM - 762, 0, false);*/
+
 
 
 
@@ -123,20 +124,20 @@ public class blueFlower extends LinearOpMode {
 
         waitForFlywheel(2.0);
 
-        feedBalls(3);
+        feedBalls(4);
 
-        outtakeOn = false;
+        everythingOff();
 
-        setPower(0, 0, 0);
-        outtake.setVelocity(0);
-        intake.setPower(0);
-        leftServo.setPower(0);
-        rightServo.setPower(0);
-        transfer.setPower(0);
+        drive(0,(tileLength * -1) - 240,pi/2, false);
+        drive(0,(tileLength * -1) - 340, pi/2, true);
+        drive(50,0,0,false);
+        outtakeOn = true;
+        aim();
+        waitForFlywheel(1.6);
+        feedBalls(4);
+        everythingOff();
 
-        double matchTime = time.seconds();
-        telemetry.addData("Match Time", "%.2f", matchTime);
-        telemetry.update();
+
     }
 
 
@@ -424,6 +425,17 @@ public class blueFlower extends LinearOpMode {
         intake.setPower(0);
         leftServo.setPower(0);
         rightServo.setPower(0);
+    }
+
+    private void everythingOff(){
+
+        outtakeOn = false;
+        setPower(0, 0, 0);
+        outtake.setVelocity(0);
+        intake.setPower(0);
+        leftServo.setPower(0);
+        rightServo.setPower(0);
+        transfer.setPower(0);
     }
 
 
