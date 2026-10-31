@@ -90,6 +90,8 @@ public class blueFlower extends LinearOpMode {
 
     boolean outtakeOn = false;
 
+    public static final double pi = Math.PI;
+
 
 
 
@@ -110,8 +112,8 @@ public class blueFlower extends LinearOpMode {
 
         outtakeOn = true;
 
-
-        drive(goalXMM, goalYMM - 762, 0, false);
+        drive(0,0,pi/2,false);
+        /*drive(goalXMM, goalYMM - 762, 0, false);*/
 
 
 
