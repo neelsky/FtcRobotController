@@ -42,7 +42,7 @@ public class secondaryAuto extends LinearOpMode {
 
     private Limelight3A limelight;
 
-    private DcMotor frontLeft, frontRight, backLeft, backRight;
+    private DcMotor frontLeftMotor, frontRightMotor, backLeftMotor, backRightMotor;
     private GoBildaPinpointDriver pinpoint;
 
 
@@ -250,10 +250,10 @@ public class secondaryAuto extends LinearOpMode {
                 pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
         telemetry.update();
 
-        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
-        backRight = hardwareMap.get(DcMotor.class, "backRight");
+        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeft");
+        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRight");
+        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeft");
+        backRightMotor = hardwareMap.get(DcMotor.class, "backRight");
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
         leftServo = hardwareMap.get(CRServo.class, "leftServo");
         rightServo = hardwareMap.get(CRServo.class, "rightServo");
@@ -261,12 +261,12 @@ public class secondaryAuto extends LinearOpMode {
         transfer = hardwareMap.get(CRServo.class, "transfer");
 
 
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        backLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.FORWARD);
-        backRight.setDirection(DcMotor.Direction.FORWARD);
+        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        backRightMotor.setDirection(DcMotor.Direction.FORWARD);
 
-        for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, intake}){
+        for(DcMotor motor : new DcMotor[]{frontLeftMotor, frontRightMotor, backLeftMotor, backRightMotor, intake}){
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
@@ -411,10 +411,10 @@ public class secondaryAuto extends LinearOpMode {
 
         double max = Math.max(1.0, Math.max(Math.max(Math.abs(frontLeftPowerHelper), Math.abs(frontRightPowerHelper)), Math.max(Math.abs(backLeftPowerHelper), Math.abs(backRightPowerHelper))));
 
-        frontLeft.setPower(frontLeftPowerHelper / max);
-        frontRight.setPower(frontRightPowerHelper / max);
-        backLeft.setPower(backLeftPowerHelper / max);
-        backRight.setPower(backRightPowerHelper / max);
+        frontLeftMotor.setPower(frontLeftPowerHelper / max);
+        frontRightMotor.setPower(frontRightPowerHelper / max);
+        backLeftMotor.setPower(backLeftPowerHelper / max);
+        backRightMotor.setPower(backRightPowerHelper / max);
     }
 
     private double turnAngle(double angleHelper) {
