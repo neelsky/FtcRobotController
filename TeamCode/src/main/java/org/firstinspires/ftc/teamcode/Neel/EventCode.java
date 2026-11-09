@@ -1,34 +1,27 @@
 package org.firstinspires.ftc.teamcode.Neel;
 
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.IMU;
+
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
 
-import java.util.ArrayList;
-import java.util.List;
-
-@TeleOp(name = "Event Code", group = "Glitch")
+@TeleOp(name = "Event Code Bugs Bunny", group = "Glitch")
 public class EventCode extends LinearOpMode {
 
     Servo indicator;
+
+    double lightnum = 0;
     private DcMotor frontLeftMotor;
     private DcMotor backLeftMotor;
     private DcMotor frontRightMotor;
     private DcMotor backRightMotor;
 
-    private DcMotorEx intake;
+
 
 
     @Override
@@ -42,7 +35,7 @@ public class EventCode extends LinearOpMode {
         while (opModeIsActive()) {
 
             doDriving();
-            RunIntakemotor();
+
             runlight();
 
             telemetry.update();
@@ -68,20 +61,13 @@ public class EventCode extends LinearOpMode {
 
 
 
-    private void RunIntakemotor() {
-        if (gamepad1.dpad_up) {
-            intake.setPower(0.5);
-        }
-        if (gamepad1.dpad_down) {
-            intake.setPower(-0.5);
-        }
 
-        if (gamepad1.left_bumper){
-            intake.setPower(0);
-        }
-    }
     private void runlight(){
-        indicator.setPosition(0.5);
+
+            indicator.setPosition(0.5);
+
+
+
     }
 
 
@@ -92,11 +78,11 @@ public class EventCode extends LinearOpMode {
         backLeftMotor = hardwareMap.dcMotor.get("backLeft");
         frontRightMotor = hardwareMap.dcMotor.get("frontRight");
         backRightMotor = hardwareMap.dcMotor.get("backRight");
-        intake = hardwareMap.get(DcMotorEx.class, "intake");
+
 
         frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        backLeftMotor.setDirection(DcMotor.Direction.FORWARD);
+        frontRightMotor.setDirection(DcMotor.Direction.REVERSE);
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);
 
 
