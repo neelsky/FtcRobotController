@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.Neel;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -19,7 +20,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Locale;
-
+@Disabled
 @TeleOp(name = "Comp Prep Odometry", group = "Glitch")
 public class CompPrepOdemetry extends LinearOpMode {
     public static double NEW_P = 7.0;

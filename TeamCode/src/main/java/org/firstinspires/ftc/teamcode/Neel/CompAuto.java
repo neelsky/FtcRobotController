@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.PoseMemory;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.PoseKeeper;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -213,8 +213,8 @@ public abstract class CompAuto extends LinearOpMode {
     }
 
     private double currentHeading() {
-        follower.update();
-        PoseMemory.save(follower.getPose(), alliance());
+        follower.updatePose();
+        PoseKeeper.save(follower.getPose(), alliance());
         double deg = Math.toDegrees(follower.getPose().getHeading());
         return isRed() ? wrapDegrees(deg - 180) : deg;
     }
@@ -241,7 +241,7 @@ public abstract class CompAuto extends LinearOpMode {
     }
 
     private void driveTo(Pose target, double maxPower, boolean intakeOn, boolean preSpin, double timeoutS) {
-        follower.update();
+        follower.updatePose();
         Pose from = follower.getPose();
         double endHeading = from.getHeading()
                 + Math.toRadians(wrapDegrees(Math.toDegrees(target.getHeading() - from.getHeading())));
@@ -256,7 +256,7 @@ public abstract class CompAuto extends LinearOpMode {
         ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive() && follower.isBusy() && timer.seconds() < timeoutS) {
             follower.update();
-            PoseMemory.save(follower.getPose(), alliance());
+            PoseKeeper.save(follower.getPose(), alliance());
             shooter.update();
             if (intakeOn) {
                 intake.pickup(true);
@@ -275,7 +275,7 @@ public abstract class CompAuto extends LinearOpMode {
     private void waitSeconds(double seconds) {
         ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive() && timer.seconds() < seconds) {
-            follower.update();
+            follower.updatePose();
             shooter.update();
             telemetry.addData("step", step);
             telemetry.update();
@@ -286,7 +286,7 @@ public abstract class CompAuto extends LinearOpMode {
         int readings = 0;
         ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive() && timer.seconds() < seconds) {
-            follower.update();
+            follower.updatePose();
             shooter.update();
             String ids = vision.freshHiveTagIds(TAG_FRESH_MS);
             if (!ids.isEmpty()) {

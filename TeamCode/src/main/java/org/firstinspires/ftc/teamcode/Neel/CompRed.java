@@ -10,4 +10,5 @@ public class CompRed extends CompTeleOp {
     protected Alliance alliance() {
         return Alliance.RED;
     }
+
 }

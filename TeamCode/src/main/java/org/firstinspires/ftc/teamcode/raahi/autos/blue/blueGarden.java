@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -21,7 +22,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 import java.util.List;
 
-
+@Disabled
 @Autonomous(name = "Blue Garden", group = "Auto")
 public class blueGarden extends LinearOpMode {
 
