@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -13,6 +15,11 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import java.util.List;
+
+
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Aimer;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+
 
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -39,6 +46,7 @@ public class blueFlower extends LinearOpMode {
 
 
 
+
     private DcMotorEx intake;
 
     private DcMotor transfer;
@@ -48,7 +56,14 @@ public class blueFlower extends LinearOpMode {
     private Limelight3A limelight;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
+
+    private IMU imu;
     private GoBildaPinpointDriver pinpoint;
+
+    private final Aimer aimer = new Aimer();
+    private Shooter shooter;
+
+
 
 
     static final double goalXMM = 1270;
@@ -124,8 +139,6 @@ public class blueFlower extends LinearOpMode {
 
 
 
-
-
     int goalVelocity = 0;
 
     double distanceToTarget = 0;
@@ -134,14 +147,18 @@ public class blueFlower extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        telemetry.addData("CODE VERSION", "RAAHI TEST OCT30");
-        telemetry.update();
+
         initializeMotors();
         setUpOdometry();
+
+        // pinpoint setup
         pinpoint.update();
         Pose2D currentPosition = pinpoint.getPosition();
         double currentX = currentPosition.getX(DistanceUnit.MM);
         double currentY = currentPosition.getY(DistanceUnit.MM);
+
+        // subsystems
+
         telemetry.addData("currentX", currentX);
         telemetry.addData("currentY", currentY);
         telemetry.update();
@@ -149,21 +166,24 @@ public class blueFlower extends LinearOpMode {
         waitForStart();
         time.reset();
 
-        /*outtakeOn = true;
+        outtakeOn = true;
 
 
-        aim();
+        //aim();
+        // turretAim(firstTag, goalOneXMM, goalOneYMM);
+
+        // initial shooting
+        /*waitForFlywheel(2.0);
+        feedBalls(4);*/
+
+        runShooter(true,firstTag);
+
+        //
+
+        everythingOff();
 
 
-        waitForFlywheel(2.0);
-
-        feedBalls(4);
-
-        everythingOff();*/
-
-
-        drive(400,0,0,false,false);
-        /*drive(-78.74,922,pi/2, false, false);
+        drive(-78.74,922,pi/2, false, false);
         drive(-88.9,1338.58, pi/2, true, false);
         drive(0,0,-pi/4, false, true);
         LLResultTypes.FiducialResult upTag = findUpTag();
@@ -175,14 +195,16 @@ public class blueFlower extends LinearOpMode {
         if (upTag != null && upTag.getFiducialId() == firstTag) {
             drive(0,0,0,false, true);
             outtakeOn = true;
-            aim();
-            waitForFlywheel(1.2);
+            //aim();
+            // Alternative turretAim(firstTag, goalOneXMM, goalOneYMM);
+            //waitForFlywheel(1.2);
             if(time.seconds() > 25){
                 drive(tileLength, tileLength, 0, true, false);
                 park();
 
             }else {
-                feedBalls(4);
+                //feedBalls(4);
+                runShooter(true, firstTag);
                 everythingOff();
                 drive(tileLength, tileLength, 0, false, false);
                 park();
@@ -194,20 +216,20 @@ public class blueFlower extends LinearOpMode {
             drive(1320.8,962.66, 0, false, true);
             drive(2778.76, 462.28, 0, false, true);
             drive(3009.9, 25.4, pi, false, true);
-            aim();
-            waitForFlywheel(0.5);
+            //aim();
+            // Alternative turretAim(secondTag, goalTwoXMM, goalTwoYMM);
+            //waitForFlywheel(0.5);
             if(time.seconds() > 27){
                 park();
             }else {
-                feedBalls(4);
+                //feedBalls(4);
+                runShooter(true,secondTag);
                 everythingOff();
                 park();
             }
 
 
-        }*/
-
-
+        }
 
 
     }
@@ -230,14 +252,10 @@ public class blueFlower extends LinearOpMode {
     }
 
 
-
-
-
-
     private void updateShooter() {
         if (!outtakeOn) return;
         distanceToTarget = distanceToGoalInches() + outtakeXOffsetIn;
-        double clamped = Math.max(40, Math.min(140, distanceToTarget));
+        double clamped = Math.max(32, Math.min(114, distanceToTarget));
         goalVelocity = velocityForDistance(clamped);
         outtake.setVelocity(goalVelocity);
     }
@@ -308,7 +326,22 @@ public class blueFlower extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
+        turret.setDirection(Servo.Direction.REVERSE);
+        intake.setDirection(DcMotor.Direction.REVERSE);
+        transfer.setDirection(DcMotor.Direction.REVERSE);
+
         turret.setPosition(turretCenterPos);
+
+        shooter = new Shooter(hardwareMap);
+
+
+
+        //intialize imu
+        imu = hardwareMap.get(IMU.class, "imu");
+        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
+                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
+                RevHubOrientationOnRobot.UsbFacingDirection.UP)));
+        imu.resetYaw();
 
 
         frontLeft.setDirection(Constants.driveConstants.leftFrontMotorDirection);
@@ -383,6 +416,19 @@ public class blueFlower extends LinearOpMode {
         }else{
             outtake.setVelocity(0);
         }
+
+
+        //subsystem aiming
+        /*double turnRate = getTurnRate();
+        if(!outtakeHelper){
+            aimer.reset();
+            aimer.noteTurnRate(turnRate);
+        } else if (findUpTag() != null) {
+            aimer.updateFromCamera(heading, turnRate, vision.getAngle());
+        } else {
+            aimer.noteTurnRate(turnRate);
+        }*/
+
 
         double timeout = Double.MAX_VALUE;
         boolean firstTime = true;
@@ -575,7 +621,7 @@ public class blueFlower extends LinearOpMode {
         drive(parkXMM, parkYMM, 0, true, false);
     }
 
-    private boolean turretAim(int tag, int tagXMM, int tagYMM) {
+    private boolean turretAim(int tag, double tagXMM, double tagYMM) {
         boolean tagFound = false;
         double tx = 0;
         LLResult result = limelight.getLatestResult();
@@ -633,9 +679,51 @@ public class blueFlower extends LinearOpMode {
         return tagFound;
     }
 
+    public double getTurnRate() {
+
+        return Math.abs(imu.getRobotAngularVelocity(AngleUnit.DEGREES).zRotationRate);
+
+    }
+
+
+    private void runShooter(boolean shooting, int tagID) {
+        if (!shooting) {
+            shooter.setGoal(0);
+        } else if (findUpTag() != null) {
+            shooter.setGoalFromDistance(distanceToTag(tagID));
+        } else {
+            shooter.useDefaultIfOff();
+        }
+        shooter.update();
+
+        if (gamepad1.left_trigger > 0.1) {
+            shooter.forceFeed();
+        } else {
+            shooter.runFeeder(shooting);
+        }
+    }
 
 
 
+    private double distanceToTag(int tagID){
+        LLResult result = limelight.getLatestResult();
+        List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+        for (LLResultTypes.FiducialResult tag : fiducials) {
+            if (tag.getFiducialId() == 40) {
+
+                Pose3D tagPose = tag.getTargetPoseRobotSpace();
+
+                double x = tagPose.getPosition().x;
+                double y = tagPose.getPosition().y;
+                double z = tagPose.getPosition().z;
+
+                double distanceMeters = Math.sqrt(x * x + y * y + z * z);
+                distanceMeters = distanceMeters * 39.3701;
+                return distanceMeters;
+            }
+        }
+        return 0;
+    }
 
 
 

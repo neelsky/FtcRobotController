@@ -1,13 +1,14 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -20,11 +21,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
-@SuppressWarnings("unused")
-@Autonomous(name = "Red Flower 3", group = "Auto")
-public class redFlower extends LinearOpMode {
+
+@Autonomous(name = "Blue Wait 6", group = "Auto")
+public class blueWait extends LinearOpMode {
 
 
 
@@ -35,11 +37,13 @@ public class redFlower extends LinearOpMode {
 
     private DcMotorEx outtake;
 
-    private CRServo leftServo;
-    private CRServo rightServo;
+
+
     private DcMotorEx intake;
 
-    private CRServo transfer;
+    private DcMotor transfer;
+
+    private Servo turret;
 
     private Limelight3A limelight;
 
@@ -54,27 +58,25 @@ public class redFlower extends LinearOpMode {
     static final double goalTwoXMM = 2170;
     static final double goalTwoYMM = 0;
 
-    static final int firstTag = 32;
-    static final int secondTag = 36;
+    static final int firstTag = 40;
+    static final int secondTag = 44;
+
+    int turretTagOne = 40;
+    int turretTagTwo = 44;
 
     static final double outtakeXOffsetIn = 0;
 
     static final double vTolerance = 0.03;
 
+    static final double mmPerFoot = 304.8;
+    static final double mmErrorTolerance = 13.2;
+    static final double maxPower = 0.6;
+    static final double minPower = 0.12;
+    static final double distanceOffset = 0.002;
+    static final double headingOffset = 1.24;
 
-    static final double mmPerFoot   = 304.8;
-    static final double mmErrorTolerance  = 13.2;
-    static final double maxPower     = 0.6; //TODO
-    static final double minPower     = 0.05; //TODO
-    static final double distanceOffset   = 0.002;
-    static final double headingOffset    = 1.24;
-
-
-
-    static final double timePerBall = 1.08; //TODO
-
+    static final double timePerBall = 1.08;
     static final int maxBalls = 4;
-
 
     static final double tileLength = 584.2;
 
@@ -82,16 +84,11 @@ public class redFlower extends LinearOpMode {
     static final double startFieldRelativeYMM = -1422.4;
     boolean visionSynced = false;
 
-
-
-
-
-
     static final double aimToleranceDeg = 1.26;
-    static final double aimKp = 0.02; //TODO
-    static final double minAimPower = 0.04; //TODO
-    static final double maxAimPower = 0.4; //TODO
-    static final double aimOut = 1.5; //TODO
+    static final double aimKp = 0.02;
+    static final double minAimPower = 0.04;
+    static final double maxAimPower = 0.4;
+    static final double aimOut = 1.5;
 
     static final double driveTimeSec = 1.5;
     static final double driveMmPerSec = 600;
@@ -103,10 +100,18 @@ public class redFlower extends LinearOpMode {
 
 
 
-    public static double NEW_P = 7.0;
+    public static double NEW_P = 0.0042;
     public static double NEW_I = 0.0;
     public static double NEW_D = 0.0;
-    public static double NEW_F = 15.0;
+    public static double NEW_F = 0.00072;
+
+
+    public static final double turretCenterPos = 0.5;
+    public static final double turretTotalServoDegrees = 360.0;
+    public static final double turretMaxSweepDeg = 180.0;
+
+    public static final double turretMinPos = Range.clip(turretCenterPos - (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
+    public static final double turretMaxPos = Range.clip(turretCenterPos + (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
 
     boolean isAtGoalVelocity = false;
 
@@ -144,7 +149,7 @@ public class redFlower extends LinearOpMode {
         waitForStart();
         time.reset();
 
-        outtakeOn = true;
+        /*outtakeOn = true;
 
 
         aim();
@@ -154,13 +159,13 @@ public class redFlower extends LinearOpMode {
 
         feedBalls(4);
 
-        everythingOff();
+        everythingOff();*/
 
 
-
-        drive(-78.74,922,pi/2, false, false);
+        drive(400,0,0,false,false);
+        /*drive(-78.74,922,pi/2, false, false);
         drive(-88.9,1338.58, pi/2, true, false);
-        drive(tileLength,0,-pi/4, false, true);
+        drive(0,0,-pi/4, false, true);
         LLResultTypes.FiducialResult upTag = findUpTag();
         if(time.seconds() > 22){
             drive(tileLength, tileLength, 0, true, false);
@@ -200,7 +205,7 @@ public class redFlower extends LinearOpMode {
             }
 
 
-        }
+        }*/
 
 
 
@@ -239,8 +244,8 @@ public class redFlower extends LinearOpMode {
 
     private int velocityForDistance(double inches) {
         goalVelocity = 0;
-        if (inches >= 40 && inches <= 140) {
-            int fromDistance = (int) Math.round(3.32 * inches + 666);
+        if (inches >= 32 && inches <= 114) {
+            int fromDistance = (int) Math.round(7.086 * inches + 666);
             goalVelocity = Math.min(fromDistance, 2200);
         } else {
             goalVelocity = 900;
@@ -300,16 +305,16 @@ public class redFlower extends LinearOpMode {
         backLeft = hardwareMap.get(DcMotor.class, "backLeft");
         backRight = hardwareMap.get(DcMotor.class, "backRight");
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-        leftServo = hardwareMap.get(CRServo.class, "leftServo");
-        rightServo = hardwareMap.get(CRServo.class, "rightServo");
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        transfer = hardwareMap.get(CRServo.class, "transfer");
+        transfer = hardwareMap.get(DcMotor.class, "transfer");
+        turret = hardwareMap.get(Servo.class, "turret");
+        turret.setPosition(turretCenterPos);
 
 
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        backLeft.setDirection(DcMotor.Direction.REVERSE);
-        frontRight.setDirection(DcMotor.Direction.FORWARD);
-        backRight.setDirection(DcMotor.Direction.FORWARD);
+        frontLeft.setDirection(Constants.driveConstants.leftFrontMotorDirection);
+        backLeft.setDirection(Constants.driveConstants.leftRearMotorDirection);
+        frontRight.setDirection(Constants.driveConstants.rightFrontMotorDirection);
+        backRight.setDirection(Constants.driveConstants.rightRearMotorDirection);
 
         for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, intake}){
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -365,12 +370,11 @@ public class redFlower extends LinearOpMode {
     private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper, boolean outtakeHelper){
 
         if(intakeHelper){
-            leftServo.setPower(0.3);
-            rightServo.setPower(0.3);
-            intake.setPower(1);
+
+            intake.setPower(0.5);
+            transfer.setPower(-0.3);
         }else{
-            leftServo.setPower(0);
-            rightServo.setPower(0);
+            transfer.setPower(0);
             intake.setPower(0);
         }
         if(outtakeHelper){
@@ -416,8 +420,7 @@ public class redFlower extends LinearOpMode {
                 backLeft.setPower(0);
                 backRight.setPower(0);
                 intake.setPower(0);
-                leftServo.setPower(0);
-                rightServo.setPower(0);
+
                 sleep(100);
                 return;
             }
@@ -447,8 +450,7 @@ public class redFlower extends LinearOpMode {
         }
 
         setPower(0, 0, 0);
-        leftServo.setPower(0);
-        rightServo.setPower(0);
+
         intake.setPower(0);
         sleep(100);
 
@@ -460,10 +462,10 @@ public class redFlower extends LinearOpMode {
     }
 
     private void setPower(double forward, double left, double turn){
-        double frontLeftPowerHelper = forward - left - turn;
-        double frontRightPowerHelper = forward + left + turn;
-        double backLeftPowerHelper = forward + left - turn;
-        double backRightPowerHelper = forward - left + turn;
+        double frontLeftPowerHelper = forward + left + turn;
+        double frontRightPowerHelper = forward - left - turn;
+        double backLeftPowerHelper = forward - left + turn;
+        double backRightPowerHelper = forward + left - turn;
 
         double max = Math.max(1.0, Math.max(Math.max(Math.abs(frontLeftPowerHelper), Math.abs(frontRightPowerHelper)), Math.max(Math.abs(backLeftPowerHelper), Math.abs(backRightPowerHelper))));
 
@@ -489,9 +491,8 @@ public class redFlower extends LinearOpMode {
 
     private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
-        leftServo.setPower(-0.3);
-        rightServo.setPower(-0.3);
-        intake.setPower(-1);
+
+        intake.setPower(-0.5);
 
         for (int i = 0; i < count && opModeIsActive(); i++) {
 
@@ -504,8 +505,7 @@ public class redFlower extends LinearOpMode {
         }
 
         transfer.setPower(0);
-        leftServo.setPower(0);
-        rightServo.setPower(0);
+
         intake.setPower(0);
     }
 
@@ -515,8 +515,7 @@ public class redFlower extends LinearOpMode {
         setPower(0, 0, 0);
         outtake.setVelocity(0);
         intake.setPower(0);
-        leftServo.setPower(0);
-        rightServo.setPower(0);
+
         transfer.setPower(0);
     }
 
@@ -561,7 +560,7 @@ public class redFlower extends LinearOpMode {
         if (upTag == null) {
             telemetry.addData("Distance to hive", "no tag in view");
         } else {
-            telemetry.addData("Distance to hive", "%.1f in");
+            telemetry.addData("Distance to hive", "%.1f in", upTagHeight);
         }
         telemetry.update();
         return upTag;
@@ -574,6 +573,64 @@ public class redFlower extends LinearOpMode {
 
     private void park(){
         drive(parkXMM, parkYMM, 0, true, false);
+    }
+
+    private boolean turretAim(int tag, int tagXMM, int tagYMM) {
+        boolean tagFound = false;
+        double tx = 0;
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
+            for (LLResultTypes.FiducialResult detection : currentDetections) {
+                if (detection.getFiducialId() == tag) {
+                    tagFound = true;
+                    tx = detection.getTargetXDegrees();
+                    break;
+                }
+            }
+        }
+        if (tagFound) {
+            ElapsedTime turretTimer = new ElapsedTime();
+            double timeoutSec = 2.5;
+            double kP = 0.01;
+
+            while (opModeIsActive() && turretTimer.seconds() < timeoutSec && Math.abs(tx) > 2.0) {
+                result = limelight.getLatestResult();
+                if (result != null && result.isValid()) {
+                    List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
+                    for (LLResultTypes.FiducialResult detection : currentDetections) {
+                        if (detection.getFiducialId() == tag) {
+                            tx = detection.getTargetXDegrees();
+                            break;
+                        }
+                    }
+
+                    double targetPos = Range.clip(turret.getPosition() + ((tx * kP) / turretTotalServoDegrees), turretMinPos, turretMaxPos);
+                    turret.setPosition(targetPos);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            pinpoint.update();
+            Pose2D pose = pinpoint.getPosition();
+            double robotXMM = pose.getX(DistanceUnit.MM);
+            double robotYMM = pose.getY(DistanceUnit.MM);
+            double robotHeading = pose.getHeading(AngleUnit.RADIANS);
+
+            double dx = tagXMM - robotXMM;
+            double dy = tagYMM - robotYMM;
+            double fieldAngleToTag = Math.atan2(dy, dx);
+
+            double relativeAngleRad = turnAngle(fieldAngleToTag - robotHeading);
+            double relativeAngleDeg = Math.toDegrees(relativeAngleRad);
+
+
+            double targetPos = Range.clip(turretCenterPos + (relativeAngleDeg / turretTotalServoDegrees), turretMinPos, turretMaxPos);
+            turret.setPosition(targetPos);
+        }
+
+        return tagFound;
     }
 
 
