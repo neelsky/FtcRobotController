@@ -25,7 +25,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower 3", group = "Auto")
+@Autonomous(name = "Blue Flower 6", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -100,10 +100,10 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    public static double NEW_P = 0.001;
+    public static double NEW_P = 0.0042;
     public static double NEW_I = 0.0;
     public static double NEW_D = 0.0;
-    public static double NEW_F = 0.0004;
+    public static double NEW_F = 0.00072;
 
 
     public static final double turretCenterPos = 0.5;
@@ -162,7 +162,7 @@ public class blueFlower extends LinearOpMode {
         everythingOff();*/
 
 
-        drive(0,400,0,false,false);
+        drive(400,0,0,false,false);
         /*drive(-78.74,922,pi/2, false, false);
         drive(-88.9,1338.58, pi/2, true, false);
         drive(0,0,-pi/4, false, true);
@@ -244,8 +244,8 @@ public class blueFlower extends LinearOpMode {
 
     private int velocityForDistance(double inches) {
         goalVelocity = 0;
-        if (inches >= 40 && inches <= 140) {
-            int fromDistance = (int) Math.round(10 * inches + 645);
+        if (inches >= 32 && inches <= 114) {
+            int fromDistance = (int) Math.round(7.086 * inches + 666);
             goalVelocity = Math.min(fromDistance, 2200);
         } else {
             goalVelocity = 900;
@@ -461,10 +461,10 @@ public class blueFlower extends LinearOpMode {
     }
 
     private void setPower(double forward, double left, double turn){
-        double frontLeftPowerHelper = forward - left - turn;
-        double frontRightPowerHelper = forward + left + turn;
-        double backLeftPowerHelper = forward + left - turn;
-        double backRightPowerHelper = forward - left + turn;
+        double frontLeftPowerHelper = forward + left + turn;
+        double frontRightPowerHelper = forward - left - turn;
+        double backLeftPowerHelper = forward - left + turn;
+        double backRightPowerHelper = forward + left - turn;
 
         double max = Math.max(1.0, Math.max(Math.max(Math.abs(frontLeftPowerHelper), Math.abs(frontRightPowerHelper)), Math.max(Math.abs(backLeftPowerHelper), Math.abs(backRightPowerHelper))));
 
