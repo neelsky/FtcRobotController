@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Wait V1.4", group = "Auto")
+@Autonomous(name = "Blue Wait V4.9", group = "Auto")
 public class blueWait extends LinearOpMode {
 
 
