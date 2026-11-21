@@ -130,7 +130,7 @@ public class blueFlower extends LinearOpMode {
     public static final double pi = Math.PI;
 
     public static final double parkXMM = 2336.8;
-    public static final double parkYMM = 1305.56;
+    public static final double parkYMM = 695.56;
 
 
 
@@ -187,7 +187,6 @@ public class blueFlower extends LinearOpMode {
 
         LLResultTypes.FiducialResult upTag = findUpTag();
         if(time.seconds() > 22){
-            drive(tileLength, tileLength, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
             park();
             return;
         }
@@ -203,17 +202,17 @@ public class blueFlower extends LinearOpMode {
 
             }else {
                 //feedBalls(4);
+                turretAim(firstTag, goalOneXMM, goalOneYMM - 610);
                 runShooter(true, firstTag, true);
                 everythingOff();
-                drive(tileLength, tileLength, 0, false, false, secondTag, goalTwoXMM, goalTwoYMM);
                 park();
 
             }
 
         } else if (upTag == null || upTag.getFiducialId() == secondTag) {
             outtakeOn = true;
-            drive(1320.8,962.66, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
-            drive(2778.76, 462.28, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
+            drive(1320.8,352.66, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
+            drive(2778.76, 162.28, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
             drive(3009.9, 25.4, pi, false, true, secondTag, goalTwoXMM, goalTwoYMM);
             //aim();
             // Alternative turretAim(secondTag, goalTwoXMM, goalTwoYMM);
@@ -222,6 +221,7 @@ public class blueFlower extends LinearOpMode {
                 park();
             }else {
                 //feedBalls(4);
+                turretAim(secondTag, goalTwoXMM, goalTwoYMM - 610);
                 runShooter(true, secondTag, true);
                 everythingOff();
                 park();
