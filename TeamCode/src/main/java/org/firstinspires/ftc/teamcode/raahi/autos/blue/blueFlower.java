@@ -371,9 +371,10 @@ public class blueFlower extends LinearOpMode {
 
         if(intakeHelper){
 
-            intake.setPower(1);
+            intake.setPower(0.5);
+            transfer.setPower(-0.3);
         }else{
-
+            transfer.setPower(0);
             intake.setPower(0);
         }
         if(outtakeHelper){
@@ -491,7 +492,7 @@ public class blueFlower extends LinearOpMode {
     private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
 
-        intake.setPower(-1);
+        intake.setPower(-0.5);
 
         for (int i = 0; i < count && opModeIsActive(); i++) {
 
