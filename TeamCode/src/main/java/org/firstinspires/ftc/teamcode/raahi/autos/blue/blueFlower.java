@@ -688,19 +688,27 @@ public class blueFlower extends LinearOpMode {
 
         shooter.startFeeding();
         ElapsedTime shootTimer = new ElapsedTime();
-        double shootSeconds = 1.5;
+        double shootSeconds = 5.78;
 
-        while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
-            if (aimDuringShot) {
-                turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+        try {
+            if (opModeIsActive()) {
+                // Match the intake direction used by the original shooting routine.
+                intake.setPower(-0.5);
             }
-            updateShooter(tagID);
-            shooter.runFeeder(true);
-            shooter.addTelemetry(telemetry);
-            telemetry.update();
-        }
 
-        shooter.stopFeeder();
+            while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
+                if (aimDuringShot) {
+                    turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+                }
+                updateShooter(tagID);
+                shooter.runFeeder(true);
+                shooter.addTelemetry(telemetry);
+                telemetry.update();
+            }
+        } finally {
+            intake.setPower(0);
+            shooter.stopFeeder();
+        }
     }
 
 
