@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower 8", group = "Auto")
+@Autonomous(name = "Blue Flower V12.6", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -171,6 +171,9 @@ public class blueFlower extends LinearOpMode {
         /*waitForFlywheel(2.0);
         feedBalls(4);*/
 
+        turretAim(firstTag, goalOneXMM, goalTwoXMM - 610);
+
+
         // The centered turret already points at the goal in the starting position.
         runShooter(true, firstTag, false);
 
@@ -178,9 +181,9 @@ public class blueFlower extends LinearOpMode {
 
         everythingOff();
 
+        drive(0, 610, 3 * pi / 2, true, false, firstTag, goalOneXMM, goalOneYMM - 610);
+        drive(0, 0, pi / 2, true, false, firstTag, goalOneXMM, goalOneYMM - 610);
 
-        drive(-78.74,922,pi/2, false, false, firstTag, goalOneXMM, goalOneYMM);
-        drive(-88.9,1338.58, pi/2, true, true, firstTag, goalOneXMM, goalOneYMM);
 
         LLResultTypes.FiducialResult upTag = findUpTag();
         if(time.seconds() > 22){
@@ -324,7 +327,7 @@ public class blueFlower extends LinearOpMode {
 
         // The chassis starts facing backward relative to the waypoint coordinate frame.
         pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
-                AngleUnit.RADIANS, Math.PI));
+                AngleUnit.RADIANS, 3 * Math.PI / 2));
 
     }
 

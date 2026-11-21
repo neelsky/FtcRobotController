@@ -168,8 +168,8 @@ public class blueWait extends LinearOpMode {
         }
         outtakeOn = true;
         runShooter(true, secondTag, false);
-        drive(300, 0, 0, false, false, secondTag, goalOneXMM, goalOneYMM);
-        drive(300,1850,0,false,false,secondTag, goalOneXMM, goalOneYMM);
+        drive(300, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
+        drive(300,-1850, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
 
 
 
@@ -207,7 +207,12 @@ public class blueWait extends LinearOpMode {
             shooter.setGoal(0);
         } else {
             distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
-            shooter.setGoalFromDistance(distanceToTarget);
+            int baseVelocity = Shooter.velocityForDistance(distanceToTarget);
+            if (baseVelocity > 0) {
+                shooter.setGoal(baseVelocity + 50);
+            } else if (shooter.getGoal() == 0) {
+                shooter.setGoal(Shooter.DEFAULT_VELOCITY + 50);
+            }
         }
         shooter.update();
     }
