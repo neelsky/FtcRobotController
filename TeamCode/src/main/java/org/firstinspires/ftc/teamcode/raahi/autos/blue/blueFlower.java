@@ -76,12 +76,10 @@ public class blueFlower extends LinearOpMode {
     static final int firstTag = 40;
     static final int secondTag = 44;
 
-    int turretTagOne = 40;
-    int turretTagTwo = 44;
 
     static final double outtakeXOffsetIn = 0;
 
-    static final double vTolerance = 0.03;
+
 
     static final double mmPerFoot = 304.8;
     static final double mmErrorTolerance = 13.2;
@@ -128,7 +126,7 @@ public class blueFlower extends LinearOpMode {
     public static final double turretMinPos = Range.clip(turretCenterPos - (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
     public static final double turretMaxPos = Range.clip(turretCenterPos + (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
 
-    boolean isAtGoalVelocity = false;
+
 
     boolean outtakeOn = false;
 
@@ -139,7 +137,7 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    int goalVelocity = 0;
+
 
     double distanceToTarget = 0;
 
@@ -183,39 +181,39 @@ public class blueFlower extends LinearOpMode {
         everythingOff();
 
 
-        drive(-78.74,922,pi/2, false, false);
-        drive(-88.9,1338.58, pi/2, true, false);
-        drive(0,0,-pi/4, false, true);
+        drive(-78.74,922,pi/2, false, false, firstTag, goalOneXMM, goalOneYMM);
+        drive(-88.9,1338.58, pi/2, true, false, firstTag, goalOneXMM, goalOneYMM);
+        drive(0,0,-pi/4, false, true, firstTag, goalOneXMM, goalOneYMM);
         LLResultTypes.FiducialResult upTag = findUpTag();
         if(time.seconds() > 22){
-            drive(tileLength, tileLength, 0, true, false);
+            drive(tileLength, tileLength, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
             park();
             return;
         }
         if (upTag != null && upTag.getFiducialId() == firstTag) {
-            drive(0,0,0,false, true);
+            drive(0,0,0,false, true, firstTag, goalOneXMM, goalOneYMM);
             outtakeOn = true;
             //aim();
             // Alternative turretAim(firstTag, goalOneXMM, goalOneYMM);
             //waitForFlywheel(1.2);
             if(time.seconds() > 25){
-                drive(tileLength, tileLength, 0, true, false);
+                drive(tileLength, tileLength, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
                 park();
 
             }else {
                 //feedBalls(4);
                 runShooter(true, firstTag);
                 everythingOff();
-                drive(tileLength, tileLength, 0, false, false);
+                drive(tileLength, tileLength, 0, false, false, secondTag, goalTwoXMM, goalTwoYMM);
                 park();
 
             }
 
         } else if (upTag == null || upTag.getFiducialId() == secondTag) {
             outtakeOn = true;
-            drive(1320.8,962.66, 0, false, true);
-            drive(2778.76, 462.28, 0, false, true);
-            drive(3009.9, 25.4, pi, false, true);
+            drive(1320.8,962.66, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
+            drive(2778.76, 462.28, 0, false, true, secondTag, goalTwoXMM, goalTwoYMM);
+            drive(3009.9, 25.4, pi, false, true, secondTag, goalTwoXMM, goalTwoYMM);
             //aim();
             // Alternative turretAim(secondTag, goalTwoXMM, goalTwoYMM);
             //waitForFlywheel(0.5);
@@ -235,13 +233,7 @@ public class blueFlower extends LinearOpMode {
     }
 
 
-    private double distanceToGoalInches() {
-        pinpoint.update();
-        Pose2D p = pinpoint.getPosition();
-        double dx = goalXMM - p.getX(DistanceUnit.MM);
-        double dy = goalYMM - p.getY(DistanceUnit.MM);
-        return Math.hypot(dx, dy) / 25.4;
-    }
+
 
     private double headingToGoal() {
         pinpoint.update();
@@ -252,40 +244,25 @@ public class blueFlower extends LinearOpMode {
     }
 
 
-    private void updateShooter() {
-        if (!outtakeOn) return;
-        distanceToTarget = distanceToGoalInches() + outtakeXOffsetIn;
-        double clamped = Math.max(32, Math.min(114, distanceToTarget));
-        goalVelocity = velocityForDistance(clamped);
-        outtake.setVelocity(goalVelocity);
-    }
-
-    private int velocityForDistance(double inches) {
-        goalVelocity = 0;
-        if (inches >= 32 && inches <= 114) {
-            int fromDistance = (int) Math.round(7.086 * inches + 666);
-            goalVelocity = Math.min(fromDistance, 2200);
+    private void updateShooter(int tagID) {
+        if (!outtakeOn) {
+            shooter.setGoal(0);
         } else {
-            goalVelocity = 900;
+            distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
+            shooter.setGoalFromDistance(distanceToTarget);
         }
-        return (goalVelocity);
+        shooter.update();
     }
 
-    private boolean atGoalVelocity() {
-        double v = outtake.getVelocity();
-        isAtGoalVelocity = Math.abs(v - goalVelocity) <= goalVelocity * vTolerance;
-        return isAtGoalVelocity;
-    }
-
-    private void waitForFlywheel(double timeoutSec) {
+    private void waitForFlywheel(double timeoutSec, int tagID) {
         ElapsedTime t = new ElapsedTime();
         while (opModeIsActive() && t.seconds() < timeoutSec) {
-            updateShooter();
+            updateShooter(tagID);
             telemetry.addData("dist (in)", "%.1f", distanceToTarget);
-            telemetry.addData("goalVelocity", goalVelocity);
-            telemetry.addData("currentVelocity", outtake.getVelocity());
+            telemetry.addData("goalVelocity", shooter.getGoal());
+            telemetry.addData("currentVelocity", shooter.getVelocity());
             telemetry.update();
-            if (atGoalVelocity()) break;
+            if (Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) break;
         }
     }
 
@@ -304,19 +281,10 @@ public class blueFlower extends LinearOpMode {
 
 
 
-        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        outtake.setVelocityPIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
-
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
         limelight.pipelineSwitch(0);
         limelight.start();
-
-        PIDFCoefficients pidfValues = outtake.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-        telemetry.addData("Flywheel PIDF",
-                "P=%.6f I=%.6f D=%.6f F=%.6f",
-                pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
-        telemetry.update();
 
         frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
@@ -370,7 +338,7 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    private boolean aim() {
+    /*private boolean aim() {
         ElapsedTime aimTimer = new ElapsedTime();
 
         while (opModeIsActive() && aimTimer.seconds() < aimOut) {
@@ -398,9 +366,9 @@ public class blueFlower extends LinearOpMode {
         }
         setPower(0, 0, 0);
         return false;
-    }
+    }*/
 
-    private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper, boolean outtakeHelper){
+    private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper, boolean outtakeHelper, int tag, double tagXMM, double tagYMM){
 
         if(intakeHelper){
 
@@ -411,11 +379,12 @@ public class blueFlower extends LinearOpMode {
             intake.setPower(0);
         }
         if(outtakeHelper){
-            outtake.setVelocity(900);
             outtakeOn = true;
         }else{
-            outtake.setVelocity(0);
+            outtakeOn = false;
         }
+
+
 
 
         //subsystem aiming
@@ -436,7 +405,8 @@ public class blueFlower extends LinearOpMode {
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
-            updateShooter();
+            turretAim(tag, tagXMM, tagYMM);
+            updateShooter(tag);
             pinpoint.update();
             Pose2D currentPosition = pinpoint.getPosition();
             double currentX = currentPosition.getX(DistanceUnit.MM);
@@ -527,15 +497,15 @@ public class blueFlower extends LinearOpMode {
         return angleHelper;
     }
 
-    private void pause(double seconds) {
+    /*private void pause(double seconds,) {
         ElapsedTime waitTimer = new ElapsedTime();
         while (opModeIsActive() && waitTimer.seconds() < seconds) {
             updateShooter();
             idle();
         }
-    }
+    }*/
 
-    private void feedBalls(int count) {
+    /*private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
 
         intake.setPower(-0.5);
@@ -553,16 +523,14 @@ public class blueFlower extends LinearOpMode {
         transfer.setPower(0);
 
         intake.setPower(0);
-    }
+    }*/
 
     private void everythingOff(){
 
         outtakeOn = false;
         setPower(0, 0, 0);
-        outtake.setVelocity(0);
+        shooter.stop();
         intake.setPower(0);
-
-        transfer.setPower(0);
     }
 
     private LLResultTypes.FiducialResult findUpTag(){
@@ -587,18 +555,19 @@ public class blueFlower extends LinearOpMode {
             }
 
             List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            if (tags != null) {
+                for (LLResultTypes.FiducialResult tag : tags) {
+                    int id = tag.getFiducialId();
+                    if (id != firstTag && id != secondTag) {
+                        continue;
+                    }
 
-            for (LLResultTypes.FiducialResult tag : tags) {
-                int id = tag.getFiducialId();
-                if (id != firstTag && id != secondTag) {
-                    continue;
-                }
+                    double height = tagHeightInches(tag);
+                    if (upTag == null || height > upTagHeight) {
+                        upTag = tag;
+                        upTagHeight = height;
 
-                double height = tagHeightInches(tag);
-                if (upTag == null || height > upTagHeight) {
-                    upTag = tag;
-                    upTagHeight = height;
-
+                    }
                 }
             }
         }
@@ -618,7 +587,7 @@ public class blueFlower extends LinearOpMode {
     }
 
     private void park(){
-        drive(parkXMM, parkYMM, 0, true, false);
+        drive(parkXMM, parkYMM, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
     }
 
     private boolean turretAim(int tag, double tagXMM, double tagYMM) {
@@ -627,11 +596,13 @@ public class blueFlower extends LinearOpMode {
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
             List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
-            for (LLResultTypes.FiducialResult detection : currentDetections) {
-                if (detection.getFiducialId() == tag) {
-                    tagFound = true;
-                    tx = detection.getTargetXDegrees();
-                    break;
+            if (currentDetections != null) {
+                for (LLResultTypes.FiducialResult detection : currentDetections) {
+                    if (detection.getFiducialId() == tag) {
+                        tagFound = true;
+                        tx = detection.getTargetXDegrees();
+                        break;
+                    }
                 }
             }
         }
@@ -644,10 +615,12 @@ public class blueFlower extends LinearOpMode {
                 result = limelight.getLatestResult();
                 if (result != null && result.isValid()) {
                     List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
-                    for (LLResultTypes.FiducialResult detection : currentDetections) {
-                        if (detection.getFiducialId() == tag) {
-                            tx = detection.getTargetXDegrees();
-                            break;
+                    if (currentDetections != null) {
+                        for (LLResultTypes.FiducialResult detection : currentDetections) {
+                            if (detection.getFiducialId() == tag) {
+                                tx = detection.getTargetXDegrees();
+                                break;
+                            }
                         }
                     }
 
@@ -688,38 +661,62 @@ public class blueFlower extends LinearOpMode {
 
     private void runShooter(boolean shooting, int tagID) {
         if (!shooting) {
-            shooter.setGoal(0);
-        } else if (findUpTag() != null) {
-            shooter.setGoalFromDistance(distanceToTag(tagID));
-        } else {
-            shooter.useDefaultIfOff();
+            shooter.stop();
+            return;
         }
-        shooter.update();
+        outtakeOn = true;
 
-        if (gamepad1.left_trigger > 0.1) {
-            shooter.forceFeed();
-        } else {
-            shooter.runFeeder(shooting);
+        ElapsedTime flywheelTimer = new ElapsedTime();
+        double timeoutSec = 2.0;
+
+        while (opModeIsActive() && flywheelTimer.seconds() < timeoutSec) {
+            turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            updateShooter(tagID);
+            if (Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) {
+                break;
+            }
+            sleep(50);
         }
+
+        shooter.startFeeding();
+        ElapsedTime shootTimer = new ElapsedTime();
+        double shootSeconds = 1.5;
+
+        while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
+            turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            updateShooter(tagID);
+            shooter.runFeeder(true);
+            shooter.addTelemetry(telemetry);
+            telemetry.update();
+        }
+
+        shooter.stopFeeder();
     }
 
 
 
     private double distanceToTag(int tagID){
         LLResult result = limelight.getLatestResult();
+        if (result == null || !result.isValid()) {
+            return 0;
+        }
         List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+        if (fiducials == null) {
+            return 0;
+        }
         for (LLResultTypes.FiducialResult tag : fiducials) {
-            if (tag.getFiducialId() == 40) {
+            if (tag.getFiducialId() == tagID) {
 
                 Pose3D tagPose = tag.getTargetPoseRobotSpace();
+                if (tagPose != null) {
+                    double x = tagPose.getPosition().x;
+                    double y = tagPose.getPosition().y;
+                    double z = tagPose.getPosition().z;
 
-                double x = tagPose.getPosition().x;
-                double y = tagPose.getPosition().y;
-                double z = tagPose.getPosition().z;
-
-                double distanceMeters = Math.sqrt(x * x + y * y + z * z);
-                distanceMeters = distanceMeters * 39.3701;
-                return distanceMeters;
+                    double distanceMeters = Math.sqrt(x * x + y * y + z * z);
+                    distanceMeters = distanceMeters * 39.3701;
+                    return distanceMeters;
+                }
             }
         }
         return 0;
