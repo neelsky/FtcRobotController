@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -49,7 +50,9 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotorEx intake;
 
-    private DcMotor transfer;
+    // Issue 1: Use the same continuous-rotation servo as Shooter and TeleOp.
+    // private DcMotor transfer;
+    private CRServo transfer;
 
     private Servo turret;
 
@@ -93,9 +96,12 @@ public class blueFlower extends LinearOpMode {
 
     static final double tileLength = 584.2;
 
-    static final double startFieldRelativeXMM = 203.2;
-    static final double startFieldRelativeYMM = -1422.4;
-    boolean visionSynced = false;
+    private long lastTurretFrameMs = -1;
+
+    // Issue 4: These fields supported the camera pose reset. Pinpoint now keeps its own pose.
+    // static final double startFieldRelativeXMM = 203.2;
+    // static final double startFieldRelativeYMM = -1422.4;
+    // boolean visionSynced = false;
 
     static final double aimToleranceDeg = 1.26;
     static final double aimKp = 0.02;
@@ -292,11 +298,14 @@ public class blueFlower extends LinearOpMode {
         backRight = hardwareMap.get(DcMotor.class, "backRight");
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        transfer = hardwareMap.get(DcMotor.class, "transfer");
+        // Issue 1: Look up the transfer as a servo so INIT matches the robot configuration.
+        // transfer = hardwareMap.get(DcMotor.class, "transfer");
+        transfer = hardwareMap.get(CRServo.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
         turret.setDirection(Servo.Direction.REVERSE);
         intake.setDirection(DcMotor.Direction.REVERSE);
-        transfer.setDirection(DcMotor.Direction.REVERSE);
+        // Issue 1: Keep the TeleOp direction because Shooter shares this servo.
+        // transfer.setDirection(DcMotor.Direction.REVERSE);
 
         turret.setPosition(turretCenterPos);
 
@@ -373,7 +382,9 @@ public class blueFlower extends LinearOpMode {
         if(intakeHelper){
 
             intake.setPower(0.5);
-            transfer.setPower(-0.3);
+            // Issue 1: Keep the intended pickup direction after removing the reversal.
+            // transfer.setPower(-0.3);
+            transfer.setPower(0.3);
         }else{
             transfer.setPower(0);
             intake.setPower(0);
@@ -460,7 +471,9 @@ public class blueFlower extends LinearOpMode {
             if (!atHeading && Math.abs(turn) < minTurnPower) turn = Math.signum(turn) * minTurnPower;
             turn = Math.max(-maxTurnPower, Math.min(maxTurnPower, turn));
 
-            setPower(speedX, speedY, turn);
+            // Issue 2: Convert Pinpoint's left and counterclockwise signs to the wheel mixer's signs.
+            // setPower(speedX, speedY, turn);
+            setPower(speedX, -speedY, -turn);
 
 
         }
@@ -539,6 +552,8 @@ public class blueFlower extends LinearOpMode {
 
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
+            // Issue 4: Leave the pose with Pinpoint. A missing camera pose can appear as zeros.
+            /*
             if (!visionSynced) {
                 Pose3D botpose = result.getBotpose();
                 if (botpose != null) {
@@ -553,6 +568,7 @@ public class blueFlower extends LinearOpMode {
                     visionSynced = true;
                 }
             }
+            */
 
             List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
             if (tags != null) {
@@ -607,6 +623,8 @@ public class blueFlower extends LinearOpMode {
             }
         }
         if (tagFound) {
+            // Issue 3: The old loop could block drive and feeder updates for up to 2.5 seconds.
+            /*
             ElapsedTime turretTimer = new ElapsedTime();
             double timeoutSec = 2.5;
             double kP = 0.01;
@@ -628,6 +646,18 @@ public class blueFlower extends LinearOpMode {
                     turret.setPosition(targetPos);
                 } else {
                     break;
+                }
+            }
+            */
+
+            // Use each camera frame once so the drive and feeder loops can keep running.
+            long frameMs = result.getControlHubTimeStamp();
+            if (frameMs != lastTurretFrameMs) {
+                lastTurretFrameMs = frameMs;
+                if (Math.abs(tx) > 2.0) {
+                    double adjustment = 0.10 * tx / turretTotalServoDegrees;
+                    turret.setPosition(Range.clip(
+                            turret.getPosition() + adjustment, turretMinPos, turretMaxPos));
                 }
             }
         } else {
