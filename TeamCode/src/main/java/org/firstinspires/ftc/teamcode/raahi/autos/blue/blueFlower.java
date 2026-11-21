@@ -34,10 +34,9 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    double xoffset = 8;
-
-
-    double yoffset = -48;
+    // Pinpoint takes the forward pod's Y offset first, then the strafe pod's X offset.
+    double xoffset = -15.0;
+    double yoffset = -106.0;
 
     private DcMotorEx outtake;
 
@@ -172,7 +171,8 @@ public class blueFlower extends LinearOpMode {
         /*waitForFlywheel(2.0);
         feedBalls(4);*/
 
-        runShooter(true,firstTag);
+        // The centered turret already points at the goal in the starting position.
+        runShooter(true, firstTag, false);
 
         //
 
@@ -200,7 +200,7 @@ public class blueFlower extends LinearOpMode {
 
             }else {
                 //feedBalls(4);
-                runShooter(true, firstTag);
+                runShooter(true, firstTag, true);
                 everythingOff();
                 drive(tileLength, tileLength, 0, false, false, secondTag, goalTwoXMM, goalTwoYMM);
                 park();
@@ -219,7 +219,7 @@ public class blueFlower extends LinearOpMode {
                 park();
             }else {
                 //feedBalls(4);
-                runShooter(true,secondTag);
+                runShooter(true, secondTag, true);
                 everythingOff();
                 park();
             }
@@ -322,8 +322,9 @@ public class blueFlower extends LinearOpMode {
         pinpoint.resetPosAndIMU();
         sleep(300);
 
+        // The chassis starts facing backward relative to the waypoint coordinate frame.
         pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
-                AngleUnit.RADIANS, 0));
+                AngleUnit.RADIANS, Math.PI));
 
     }
 
@@ -383,6 +384,7 @@ public class blueFlower extends LinearOpMode {
         double timeout = Double.MAX_VALUE;
         boolean firstTime = true;
         ElapsedTime driveTimer = new ElapsedTime();
+        ElapsedTime driveTelemetryTimer = new ElapsedTime();
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
@@ -400,6 +402,17 @@ public class blueFlower extends LinearOpMode {
             double yError = targetY - currentY;
             double headingError = turnAngle(targetHeading - currentHeading);
             double neededDistance = Math.hypot(xError, yError);
+
+            if (firstTime || driveTelemetryTimer.milliseconds() >= 100) {
+                telemetry.addData("Pinpoint pose", "X %.0f mm, Y %.0f mm, heading %.1f deg",
+                        currentX, currentY, Math.toDegrees(currentHeading));
+                telemetry.addData("Drive target", "X %.0f mm, Y %.0f mm, heading %.1f deg",
+                        targetX, targetY, Math.toDegrees(targetHeading));
+                telemetry.addData("Drive error", "X %+.0f mm, Y %+.0f mm, heading %+.1f deg",
+                        xError, yError, Math.toDegrees(headingError));
+                telemetry.update();
+                driveTelemetryTimer.reset();
+            }
 
             if (firstTime) {
                 timeout = driveTimeSec + (neededDistance / driveMmPerSec) * driveOffsetForTime;
@@ -652,7 +665,7 @@ public class blueFlower extends LinearOpMode {
         return tagFound;
     }
 
-    private void runShooter(boolean shooting, int tagID) {
+    private void runShooter(boolean shooting, int tagID, boolean aimDuringShot) {
         if (!shooting) {
             shooter.stop();
             return;
@@ -663,7 +676,9 @@ public class blueFlower extends LinearOpMode {
         double timeoutSec = 2.0;
 
         while (opModeIsActive() && flywheelTimer.seconds() < timeoutSec) {
-            turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            if (aimDuringShot) {
+                turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            }
             updateShooter(tagID);
             if (Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) {
                 break;
@@ -676,7 +691,9 @@ public class blueFlower extends LinearOpMode {
         double shootSeconds = 1.5;
 
         while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
-            turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            if (aimDuringShot) {
+                turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            }
             updateShooter(tagID);
             shooter.runFeeder(true);
             shooter.addTelemetry(telemetry);
