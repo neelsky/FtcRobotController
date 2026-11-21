@@ -4,14 +4,13 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp(name = "Shooter Tuner", group = "Glitch")
 public class ShooterTuner extends LinearOpMode {
-    private double TARGET_VELOCITY = 700;
+    private double TARGET_VELOCITY = 1300;
     private double P = 0.0;
     private double I = 0.0;
     private double D = 0.0;
@@ -34,7 +33,9 @@ public class ShooterTuner extends LinearOpMode {
     @Override
     public void runOpMode() {
         DcMotorEx outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-        CRServo transfer = hardwareMap.crservo.get("transfer");
+        DcMotor transfer = hardwareMap.get(DcMotor.class, "transfer");
+        transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        transfer.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         DcMotorEx intake = hardwareMap.get(DcMotorEx.class, "intake");
         outtake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -107,7 +108,6 @@ public class ShooterTuner extends LinearOpMode {
             panels.addData("P", String.format("%.4f", P));
             panels.update(telemetry);
         }
-
         outtake.setPower(0);
         transfer.setPower(0);
         intake.setPower(0);

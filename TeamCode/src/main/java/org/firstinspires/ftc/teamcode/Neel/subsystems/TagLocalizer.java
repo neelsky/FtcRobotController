@@ -21,8 +21,9 @@ public class TagLocalizer {
     private String lastResult = "no tags yet";
 
     public TagLocalizer(HardwareMap hardwareMap) {
+        Vision.loadCameraCheck();
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(0);
+        limelight.pipelineSwitch(Vision.PIPELINE);
         limelight.start();
     }
 
@@ -35,6 +36,10 @@ public class TagLocalizer {
     }
 
     public Pose locate() {
+        return locate(0, Vision.CAMERA_FORWARD_OF_CENTER_IN, -Vision.CAMERA_RIGHT_OF_CENTER_IN);
+    }
+
+    public Pose locate(double cameraYawDeg, double cameraForwardIn, double cameraLeftIn) {
         LLResult result = limelight.getLatestResult();
         if (result == null || !result.isValid() || result.getStaleness() > MAX_STALENESS_MS) {
             lastResult = "no fresh tags";
@@ -96,10 +101,15 @@ public class TagLocalizer {
         double[] field1 = tagField(first.getFiducialId(), cellUp);
         double[] field2 = tagField(second.getFiducialId(), cellUp);
 
-        double f1 = scale * fwd1 + Vision.CAMERA_FORWARD_OF_CENTER_IN;
-        double l1 = -(scale * c1[0] + Vision.CAMERA_RIGHT_OF_CENTER_IN);
-        double f2 = scale * fwd2 + Vision.CAMERA_FORWARD_OF_CENTER_IN;
-        double l2 = -(scale * c2[0] + Vision.CAMERA_RIGHT_OF_CENTER_IN);
+        double yaw = Math.toRadians(cameraYawDeg);
+        double camF1 = scale * fwd1;
+        double camL1 = -scale * c1[0];
+        double camF2 = scale * fwd2;
+        double camL2 = -scale * c2[0];
+        double f1 = camF1 * Math.cos(yaw) - camL1 * Math.sin(yaw) + cameraForwardIn;
+        double l1 = camF1 * Math.sin(yaw) + camL1 * Math.cos(yaw) + cameraLeftIn;
+        double f2 = camF2 * Math.cos(yaw) - camL2 * Math.sin(yaw) + cameraForwardIn;
+        double l2 = camF2 * Math.sin(yaw) + camL2 * Math.cos(yaw) + cameraLeftIn;
 
         double heading = Math.atan2(field2[1] - field1[1], field2[0] - field1[0]) - Math.atan2(l2 - l1, f2 - f1);
         double cos = Math.cos(heading);
@@ -134,6 +144,6 @@ public class TagLocalizer {
 
     private static double[] cameraInches(LLResultTypes.FiducialResult tag) {
         Position pos = tag.getTargetPoseCameraSpace().getPosition();
-        return new double[]{pos.unit.toInches(pos.x), pos.unit.toInches(pos.y), pos.unit.toInches(pos.z)};
+        return new double[]{Vision.CAMERA_X_SIGN * pos.unit.toInches(pos.x), Vision.CAMERA_Y_SIGN * pos.unit.toInches(pos.y), pos.unit.toInches(pos.z)};
     }
 }
