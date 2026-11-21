@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -25,7 +26,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower 6", group = "Auto")
+@Autonomous(name = "Blue Flower 8", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -36,6 +37,8 @@ public class blueFlower extends LinearOpMode {
     double yoffset = -48;
 
     private DcMotorEx outtake;
+
+    private Servo flowerIntake;
 
 
 
@@ -149,7 +152,7 @@ public class blueFlower extends LinearOpMode {
         waitForStart();
         time.reset();
 
-        /*outtakeOn = true;
+        outtakeOn = true;
 
 
         aim();
@@ -159,11 +162,9 @@ public class blueFlower extends LinearOpMode {
 
         feedBalls(4);
 
-        everythingOff();*/
+        everythingOff();
 
-
-        drive(400,0,0,false,false);
-        /*drive(-78.74,922,pi/2, false, false);
+        drive(-78.74,922,pi/2, false, false);
         drive(-88.9,1338.58, pi/2, true, false);
         drive(0,0,-pi/4, false, true);
         LLResultTypes.FiducialResult upTag = findUpTag();
@@ -205,7 +206,7 @@ public class blueFlower extends LinearOpMode {
             }
 
 
-        }*/
+        }
 
 
 
@@ -308,13 +309,18 @@ public class blueFlower extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
+        flowerIntake = hardwareMap.get(Servo.class, "flowerIntake");
         turret.setPosition(turretCenterPos);
+        turret.setDirection(Servo.Direction.REVERSE);
+        transfer.setDirection(DcMotor.Direction.REVERSE);
 
 
         frontLeft.setDirection(Constants.driveConstants.leftFrontMotorDirection);
         backLeft.setDirection(Constants.driveConstants.leftRearMotorDirection);
         frontRight.setDirection(Constants.driveConstants.rightFrontMotorDirection);
         backRight.setDirection(Constants.driveConstants.rightRearMotorDirection);
+        intake.setDirection(DcMotor.Direction.REVERSE);
+
 
         for(DcMotor motor : new DcMotor[]{frontLeft, frontRight, backLeft, backRight, intake}){
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -445,6 +451,9 @@ public class blueFlower extends LinearOpMode {
             turn = Math.max(-maxTurnPower, Math.min(maxTurnPower, turn));
 
             setPower(speedX, speedY, turn);
+
+            telemetry.addData("time", time);
+            telemetry.update();
 
 
         }
