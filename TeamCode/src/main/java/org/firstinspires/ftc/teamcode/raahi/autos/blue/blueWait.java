@@ -15,6 +15,10 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import java.util.List;
 
 
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+
+
+
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -25,17 +29,17 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Wait 6", group = "Auto")
+@Autonomous(name = "Blue Wait V1.4", group = "Auto")
 public class blueWait extends LinearOpMode {
 
 
 
-    double xoffset = 8;
-
-
-    double yoffset = -48;
+    // Pinpoint takes the forward pod's Y offset first, then the strafe pod's X offset.
+    double xoffset = -15.0;
+    double yoffset = -106.0;
 
     private DcMotorEx outtake;
+
 
 
 
@@ -48,7 +52,12 @@ public class blueWait extends LinearOpMode {
     private Limelight3A limelight;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
+
     private GoBildaPinpointDriver pinpoint;
+
+    private Shooter shooter;
+
+
 
 
     static final double goalXMM = 1270;
@@ -61,12 +70,10 @@ public class blueWait extends LinearOpMode {
     static final int firstTag = 40;
     static final int secondTag = 44;
 
-    int turretTagOne = 40;
-    int turretTagTwo = 44;
 
     static final double outtakeXOffsetIn = 0;
 
-    static final double vTolerance = 0.03;
+
 
     static final double mmPerFoot = 304.8;
     static final double mmErrorTolerance = 13.2;
@@ -80,9 +87,12 @@ public class blueWait extends LinearOpMode {
 
     static final double tileLength = 584.2;
 
-    static final double startFieldRelativeXMM = 203.2;
-    static final double startFieldRelativeYMM = -1422.4;
-    boolean visionSynced = false;
+    private long lastTurretFrameMs = -1;
+
+    // Issue 4: These fields supported the camera pose reset. Pinpoint now keeps its own pose.
+    // static final double startFieldRelativeXMM = 203.2;
+    // static final double startFieldRelativeYMM = -1422.4;
+    // boolean visionSynced = false;
 
     static final double aimToleranceDeg = 1.26;
     static final double aimKp = 0.02;
@@ -113,7 +123,7 @@ public class blueWait extends LinearOpMode {
     public static final double turretMinPos = Range.clip(turretCenterPos - (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
     public static final double turretMaxPos = Range.clip(turretCenterPos + (turretMaxSweepDeg / turretTotalServoDegrees), 0.0, 1.0);
 
-    boolean isAtGoalVelocity = false;
+
 
     boolean outtakeOn = false;
 
@@ -126,22 +136,24 @@ public class blueWait extends LinearOpMode {
 
 
 
-    int goalVelocity = 0;
-
     double distanceToTarget = 0;
 
     private final ElapsedTime time = new ElapsedTime();
 
     @Override
     public void runOpMode() {
-        telemetry.addData("CODE VERSION", "RAAHI TEST OCT30");
-        telemetry.update();
+
         initializeMotors();
         setUpOdometry();
+
+        // pinpoint setup
         pinpoint.update();
         Pose2D currentPosition = pinpoint.getPosition();
         double currentX = currentPosition.getX(DistanceUnit.MM);
         double currentY = currentPosition.getY(DistanceUnit.MM);
+
+        // subsystems
+
         telemetry.addData("currentX", currentX);
         telemetry.addData("currentY", currentY);
         telemetry.update();
@@ -149,63 +161,29 @@ public class blueWait extends LinearOpMode {
         waitForStart();
         time.reset();
 
-        /*outtakeOn = true;
-
-
-        aim();
-
-
-        waitForFlywheel(2.0);
-
-        feedBalls(4);
-
-        everythingOff();*/
-
-
-        drive(400,0,0,false,false);
-        /*drive(-78.74,922,pi/2, false, false);
-        drive(-88.9,1338.58, pi/2, true, false);
-        drive(0,0,-pi/4, false, true);
         LLResultTypes.FiducialResult upTag = findUpTag();
-        if(time.seconds() > 22){
-            drive(tileLength, tileLength, 0, true, false);
-            park();
-            return;
+        while(opModeIsActive() && (upTag == null || upTag.getFiducialId() != secondTag)){
+            sleep(50);
+            upTag = findUpTag();
         }
-        if (upTag != null && upTag.getFiducialId() == firstTag) {
-            drive(0,0,0,false, true);
-            outtakeOn = true;
-            aim();
-            waitForFlywheel(1.2);
-            if(time.seconds() > 25){
-                drive(tileLength, tileLength, 0, true, false);
-                park();
-
-            }else {
-                feedBalls(4);
-                everythingOff();
-                drive(tileLength, tileLength, 0, false, false);
-                park();
-
-            }
-
-        } else if (upTag == null || upTag.getFiducialId() == secondTag) {
-            outtakeOn = true;
-            drive(1320.8,962.66, 0, false, true);
-            drive(2778.76, 462.28, 0, false, true);
-            drive(3009.9, 25.4, pi, false, true);
-            aim();
-            waitForFlywheel(0.5);
-            if(time.seconds() > 27){
-                park();
-            }else {
-                feedBalls(4);
-                everythingOff();
-                park();
-            }
+        outtakeOn = true;
+        runShooter(true, secondTag, false);
+        drive(300, 0, 0, false, false, secondTag, goalOneXMM, goalOneYMM);
+        drive(300,1850,0,false,false,secondTag, goalOneXMM, goalOneYMM);
 
 
-        }*/
+
+
+        //aim();
+        // turretAim(firstTag, goalOneXMM, goalOneYMM);
+
+        // initial shooting
+        /*waitForFlywheel(2.0);
+        feedBalls(4);*/
+
+        // The centered turret already points at the goal in the starting position.
+
+
 
 
 
@@ -213,13 +191,7 @@ public class blueWait extends LinearOpMode {
     }
 
 
-    private double distanceToGoalInches() {
-        pinpoint.update();
-        Pose2D p = pinpoint.getPosition();
-        double dx = goalXMM - p.getX(DistanceUnit.MM);
-        double dy = goalYMM - p.getY(DistanceUnit.MM);
-        return Math.hypot(dx, dy) / 25.4;
-    }
+
 
     private double headingToGoal() {
         pinpoint.update();
@@ -230,44 +202,25 @@ public class blueWait extends LinearOpMode {
     }
 
 
-
-
-
-
-    private void updateShooter() {
-        if (!outtakeOn) return;
-        distanceToTarget = distanceToGoalInches() + outtakeXOffsetIn;
-        double clamped = Math.max(40, Math.min(140, distanceToTarget));
-        goalVelocity = velocityForDistance(clamped);
-        outtake.setVelocity(goalVelocity);
-    }
-
-    private int velocityForDistance(double inches) {
-        goalVelocity = 0;
-        if (inches >= 32 && inches <= 114) {
-            int fromDistance = (int) Math.round(7.086 * inches + 666);
-            goalVelocity = Math.min(fromDistance, 2200);
+    private void updateShooter(int tagID) {
+        if (!outtakeOn) {
+            shooter.setGoal(0);
         } else {
-            goalVelocity = 900;
+            distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
+            shooter.setGoalFromDistance(distanceToTarget);
         }
-        return (goalVelocity);
+        shooter.update();
     }
 
-    private boolean atGoalVelocity() {
-        double v = outtake.getVelocity();
-        isAtGoalVelocity = Math.abs(v - goalVelocity) <= goalVelocity * vTolerance;
-        return isAtGoalVelocity;
-    }
-
-    private void waitForFlywheel(double timeoutSec) {
+    private void waitForFlywheel(double timeoutSec, int tagID) {
         ElapsedTime t = new ElapsedTime();
         while (opModeIsActive() && t.seconds() < timeoutSec) {
-            updateShooter();
+            updateShooter(tagID);
             telemetry.addData("dist (in)", "%.1f", distanceToTarget);
-            telemetry.addData("goalVelocity", goalVelocity);
-            telemetry.addData("currentVelocity", outtake.getVelocity());
+            telemetry.addData("goalVelocity", shooter.getGoal());
+            telemetry.addData("currentVelocity", shooter.getVelocity());
             telemetry.update();
-            if (atGoalVelocity()) break;
+            if (Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) break;
         }
     }
 
@@ -286,19 +239,10 @@ public class blueWait extends LinearOpMode {
 
 
 
-        outtake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        outtake.setVelocityPIDFCoefficients(NEW_P, NEW_I, NEW_D, NEW_F);
-
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
         limelight.pipelineSwitch(0);
         limelight.start();
-
-        PIDFCoefficients pidfValues = outtake.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-        telemetry.addData("Flywheel PIDF",
-                "P=%.6f I=%.6f D=%.6f F=%.6f",
-                pidfValues.p, pidfValues.i, pidfValues.d, pidfValues.f);
-        telemetry.update();
 
         frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
@@ -308,7 +252,15 @@ public class blueWait extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
+        turret.setDirection(Servo.Direction.REVERSE);
+        intake.setDirection(DcMotor.Direction.REVERSE);
+        // Keep the motor direction used by TeleOp. Shooter shares this transfer motor.
+        // transfer.setDirection(DcMotor.Direction.REVERSE);
+
         turret.setPosition(turretCenterPos);
+
+        shooter = new Shooter(hardwareMap);
+
 
 
         frontLeft.setDirection(Constants.driveConstants.leftFrontMotorDirection);
@@ -330,14 +282,15 @@ public class blueWait extends LinearOpMode {
         pinpoint.resetPosAndIMU();
         sleep(300);
 
+        // The chassis starts facing backward relative to the waypoint coordinate frame.
         pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
-                AngleUnit.RADIANS, 0));
+                AngleUnit.RADIANS, Math.PI));
 
     }
 
 
 
-    private boolean aim() {
+    /*private boolean aim() {
         ElapsedTime aimTimer = new ElapsedTime();
 
         while (opModeIsActive() && aimTimer.seconds() < aimOut) {
@@ -365,32 +318,38 @@ public class blueWait extends LinearOpMode {
         }
         setPower(0, 0, 0);
         return false;
-    }
+    }*/
 
-    private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper, boolean outtakeHelper){
+    private void drive(double targetX, double targetY, double targetHeading, boolean intakeHelper, boolean outtakeHelper, int tag, double tagXMM, double tagYMM){
 
         if(intakeHelper){
 
             intake.setPower(0.5);
-            transfer.setPower(-0.3);
+            // Positive power moves the transfer in the pickup direction used by TeleOp.
+            // transfer.setPower(-0.3);
+            transfer.setPower(0.3);
         }else{
             transfer.setPower(0);
             intake.setPower(0);
         }
         if(outtakeHelper){
-            outtake.setVelocity(900);
             outtakeOn = true;
         }else{
-            outtake.setVelocity(0);
+            outtakeOn = false;
         }
+
+
+
 
         double timeout = Double.MAX_VALUE;
         boolean firstTime = true;
         ElapsedTime driveTimer = new ElapsedTime();
+        ElapsedTime driveTelemetryTimer = new ElapsedTime();
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
-            updateShooter();
+            turretAim(tag, tagXMM, tagYMM);
+            updateShooter(tag);
             pinpoint.update();
             Pose2D currentPosition = pinpoint.getPosition();
             double currentX = currentPosition.getX(DistanceUnit.MM);
@@ -403,6 +362,17 @@ public class blueWait extends LinearOpMode {
             double yError = targetY - currentY;
             double headingError = turnAngle(targetHeading - currentHeading);
             double neededDistance = Math.hypot(xError, yError);
+
+            if (firstTime || driveTelemetryTimer.milliseconds() >= 100) {
+                telemetry.addData("Pinpoint pose", "X %.0f mm, Y %.0f mm, heading %.1f deg",
+                        currentX, currentY, Math.toDegrees(currentHeading));
+                telemetry.addData("Drive target", "X %.0f mm, Y %.0f mm, heading %.1f deg",
+                        targetX, targetY, Math.toDegrees(targetHeading));
+                telemetry.addData("Drive error", "X %+.0f mm, Y %+.0f mm, heading %+.1f deg",
+                        xError, yError, Math.toDegrees(headingError));
+                telemetry.update();
+                driveTelemetryTimer.reset();
+            }
 
             if (firstTime) {
                 timeout = driveTimeSec + (neededDistance / driveMmPerSec) * driveOffsetForTime;
@@ -444,7 +414,9 @@ public class blueWait extends LinearOpMode {
             if (!atHeading && Math.abs(turn) < minTurnPower) turn = Math.signum(turn) * minTurnPower;
             turn = Math.max(-maxTurnPower, Math.min(maxTurnPower, turn));
 
-            setPower(speedX, speedY, turn);
+            // Issue 2: Convert Pinpoint's left and counterclockwise signs to the wheel mixer's signs.
+            // setPower(speedX, speedY, turn);
+            setPower(speedX, -speedY, -turn);
 
 
         }
@@ -481,15 +453,15 @@ public class blueWait extends LinearOpMode {
         return angleHelper;
     }
 
-    private void pause(double seconds) {
+    /*private void pause(double seconds,) {
         ElapsedTime waitTimer = new ElapsedTime();
         while (opModeIsActive() && waitTimer.seconds() < seconds) {
             updateShooter();
             idle();
         }
-    }
+    }*/
 
-    private void feedBalls(int count) {
+    /*private void feedBalls(int count) {
         count = Math.max(1, Math.min(maxBalls, count));
 
         intake.setPower(-0.5);
@@ -507,16 +479,14 @@ public class blueWait extends LinearOpMode {
         transfer.setPower(0);
 
         intake.setPower(0);
-    }
+    }*/
 
     private void everythingOff(){
 
         outtakeOn = false;
         setPower(0, 0, 0);
-        outtake.setVelocity(0);
+        shooter.stop();
         intake.setPower(0);
-
-        transfer.setPower(0);
     }
 
     private LLResultTypes.FiducialResult findUpTag(){
@@ -525,6 +495,8 @@ public class blueWait extends LinearOpMode {
 
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
+            // Issue 4: Leave the pose with Pinpoint. A missing camera pose can appear as zeros.
+            /*
             if (!visionSynced) {
                 Pose3D botpose = result.getBotpose();
                 if (botpose != null) {
@@ -539,20 +511,22 @@ public class blueWait extends LinearOpMode {
                     visionSynced = true;
                 }
             }
+            */
 
             List<LLResultTypes.FiducialResult> tags = result.getFiducialResults();
+            if (tags != null) {
+                for (LLResultTypes.FiducialResult tag : tags) {
+                    int id = tag.getFiducialId();
+                    if (id != firstTag && id != secondTag) {
+                        continue;
+                    }
 
-            for (LLResultTypes.FiducialResult tag : tags) {
-                int id = tag.getFiducialId();
-                if (id != firstTag && id != secondTag) {
-                    continue;
-                }
+                    double height = tagHeightInches(tag);
+                    if (upTag == null || height > upTagHeight) {
+                        upTag = tag;
+                        upTagHeight = height;
 
-                double height = tagHeightInches(tag);
-                if (upTag == null || height > upTagHeight) {
-                    upTag = tag;
-                    upTagHeight = height;
-
+                    }
                 }
             }
         }
@@ -572,24 +546,28 @@ public class blueWait extends LinearOpMode {
     }
 
     private void park(){
-        drive(parkXMM, parkYMM, 0, true, false);
+        drive(parkXMM, parkYMM, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
     }
 
-    private boolean turretAim(int tag, int tagXMM, int tagYMM) {
+    private boolean turretAim(int tag, double tagXMM, double tagYMM) {
         boolean tagFound = false;
         double tx = 0;
         LLResult result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
             List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
-            for (LLResultTypes.FiducialResult detection : currentDetections) {
-                if (detection.getFiducialId() == tag) {
-                    tagFound = true;
-                    tx = detection.getTargetXDegrees();
-                    break;
+            if (currentDetections != null) {
+                for (LLResultTypes.FiducialResult detection : currentDetections) {
+                    if (detection.getFiducialId() == tag) {
+                        tagFound = true;
+                        tx = detection.getTargetXDegrees();
+                        break;
+                    }
                 }
             }
         }
         if (tagFound) {
+            // Issue 3: The old loop could block drive and feeder updates for up to 2.5 seconds.
+            /*
             ElapsedTime turretTimer = new ElapsedTime();
             double timeoutSec = 2.5;
             double kP = 0.01;
@@ -598,10 +576,12 @@ public class blueWait extends LinearOpMode {
                 result = limelight.getLatestResult();
                 if (result != null && result.isValid()) {
                     List<LLResultTypes.FiducialResult> currentDetections = result.getFiducialResults();
-                    for (LLResultTypes.FiducialResult detection : currentDetections) {
-                        if (detection.getFiducialId() == tag) {
-                            tx = detection.getTargetXDegrees();
-                            break;
+                    if (currentDetections != null) {
+                        for (LLResultTypes.FiducialResult detection : currentDetections) {
+                            if (detection.getFiducialId() == tag) {
+                                tx = detection.getTargetXDegrees();
+                                break;
+                            }
                         }
                     }
 
@@ -609,6 +589,18 @@ public class blueWait extends LinearOpMode {
                     turret.setPosition(targetPos);
                 } else {
                     break;
+                }
+            }
+            */
+
+            // Use each camera frame once so the drive and feeder loops can keep running.
+            long frameMs = result.getControlHubTimeStamp();
+            if (frameMs != lastTurretFrameMs) {
+                lastTurretFrameMs = frameMs;
+                if (Math.abs(tx) > 2.0) {
+                    double adjustment = 0.10 * tx / turretTotalServoDegrees;
+                    turret.setPosition(Range.clip(
+                            turret.getPosition() + adjustment, turretMinPos, turretMaxPos));
                 }
             }
         } else {
@@ -633,9 +625,80 @@ public class blueWait extends LinearOpMode {
         return tagFound;
     }
 
+    private void runShooter(boolean shooting, int tagID, boolean aimDuringShot) {
+        if (!shooting) {
+            shooter.stop();
+            return;
+        }
+        outtakeOn = true;
+
+        ElapsedTime flywheelTimer = new ElapsedTime();
+        double timeoutSec = 2.0;
+
+        while (opModeIsActive() && flywheelTimer.seconds() < timeoutSec) {
+            if (aimDuringShot) {
+                turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+            }
+            updateShooter(tagID);
+            if (Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) {
+                break;
+            }
+            sleep(50);
+        }
+
+        shooter.startFeeding();
+        ElapsedTime shootTimer = new ElapsedTime();
+        double shootSeconds = 5;
+
+        try {
+            if (opModeIsActive()) {
+                // Match the intake direction used by the original shooting routine.
+                intake.setPower(-0.5);
+            }
+
+            while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
+                if (aimDuringShot) {
+                    turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
+                }
+                updateShooter(tagID);
+                shooter.runFeeder(true);
+                shooter.addTelemetry(telemetry);
+                telemetry.update();
+            }
+        } finally {
+            intake.setPower(0);
+            shooter.stopFeeder();
+        }
+    }
 
 
 
+    private double distanceToTag(int tagID){
+        LLResult result = limelight.getLatestResult();
+        if (result == null || !result.isValid()) {
+            return 0;
+        }
+        List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+        if (fiducials == null) {
+            return 0;
+        }
+        for (LLResultTypes.FiducialResult tag : fiducials) {
+            if (tag.getFiducialId() == tagID) {
+
+                Pose3D tagPose = tag.getTargetPoseRobotSpace();
+                if (tagPose != null) {
+                    double x = tagPose.getPosition().x;
+                    double y = tagPose.getPosition().y;
+                    double z = tagPose.getPosition().z;
+
+                    double distanceMeters = Math.sqrt(x * x + y * y + z * z);
+                    distanceMeters = distanceMeters * 39.3701;
+                    return distanceMeters;
+                }
+            }
+        }
+        return 0;
+    }
 
 
 

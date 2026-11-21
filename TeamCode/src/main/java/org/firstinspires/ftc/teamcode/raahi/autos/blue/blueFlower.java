@@ -688,7 +688,7 @@ public class blueFlower extends LinearOpMode {
 
         shooter.startFeeding();
         ElapsedTime shootTimer = new ElapsedTime();
-        double shootSeconds = 5.78;
+        double shootSeconds = 5;
 
         try {
             if (opModeIsActive()) {
