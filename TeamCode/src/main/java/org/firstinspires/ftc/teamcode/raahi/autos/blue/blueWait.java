@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Wait V4.9", group = "Auto")
+@Autonomous(name = "Blue Wait V5.3.4", group = "Auto")
 public class blueWait extends LinearOpMode {
 
 
@@ -169,7 +169,7 @@ public class blueWait extends LinearOpMode {
         outtakeOn = true;
         runShooter(true, secondTag, false);
         drive(300, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
-        drive(300,-1850, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
+        drive(300,-1100, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
 
 
 
@@ -209,7 +209,7 @@ public class blueWait extends LinearOpMode {
             distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
             int baseVelocity = Shooter.velocityForDistance(distanceToTarget);
             if (baseVelocity > 0) {
-                shooter.setGoal(baseVelocity + 50);
+                shooter.setGoal(baseVelocity + 70);
             } else if (shooter.getGoal() == 0) {
                 shooter.setGoal(Shooter.DEFAULT_VELOCITY + 50);
             }

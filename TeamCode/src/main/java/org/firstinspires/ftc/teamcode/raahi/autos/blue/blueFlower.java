@@ -29,7 +29,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower V14.3", group = "Auto")
+@Autonomous(name = "Blue Flower V1.8.3", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -171,10 +171,7 @@ public class blueFlower extends LinearOpMode {
         /*waitForFlywheel(2.0);
         feedBalls(4);*/
 
-        turretAim(firstTag, goalOneXMM, goalTwoXMM - 610);
-
-
-        // The centered turret already points at the goal in the starting position.
+        // Hold the centered turret for the opening shot from the starting position.
         runShooter(true, firstTag, false);
 
         //
@@ -250,7 +247,12 @@ public class blueFlower extends LinearOpMode {
             shooter.setGoal(0);
         } else {
             distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
-            shooter.setGoalFromDistance(distanceToTarget);
+            int baseVelocity = Shooter.velocityForDistance(distanceToTarget);
+            if (baseVelocity > 0) {
+                shooter.setGoal(baseVelocity + 70);
+            } else if (shooter.getGoal() == 0) {
+                shooter.setGoal(Shooter.DEFAULT_VELOCITY + 50);
+            }
         }
         shooter.update();
     }
@@ -665,7 +667,7 @@ public class blueFlower extends LinearOpMode {
             turret.setPosition(targetPos);
         }
 
-        return tagFound;
+        return tagFound && Math.abs(tx) <= 2.0;
     }
 
     private void runShooter(boolean shooting, int tagID, boolean aimDuringShot) {
@@ -674,6 +676,7 @@ public class blueFlower extends LinearOpMode {
             return;
         }
         outtakeOn = true;
+        shooter.stopFeeder();
 
         ElapsedTime flywheelTimer = new ElapsedTime();
         double timeoutSec = 2.0;
@@ -694,17 +697,15 @@ public class blueFlower extends LinearOpMode {
         double shootSeconds = 5;
 
         try {
-            if (opModeIsActive()) {
-                // Match the intake direction used by the original shooting routine.
-                intake.setPower(-0.5);
-            }
-
             while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
-                if (aimDuringShot) {
-                    turretAim(tagID, (tagID == firstTag ? goalOneXMM : goalTwoXMM), (tagID == firstTag ? goalOneYMM : goalTwoYMM));
-                }
+                // The opening shot uses fixed aim. Later shots require a centered tag.
+                boolean aimReady = !aimDuringShot || turretAim(tagID,
+                        tagID == firstTag ? goalOneXMM : goalTwoXMM,
+                        tagID == firstTag ? goalOneYMM : goalTwoYMM);
                 updateShooter(tagID);
-                shooter.runFeeder(true);
+                intake.setPower(aimReady ? -0.5 : 0);
+                shooter.runFeeder(aimReady);
+                telemetry.addData("Shot aim", aimReady ? "Ready" : "Waiting for tag " + tagID + " to center");
                 shooter.addTelemetry(telemetry);
                 telemetry.update();
             }
