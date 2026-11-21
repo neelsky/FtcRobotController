@@ -19,6 +19,9 @@ android {
     namespace = 'org.firstinspires.ftc.teamcode'
     compileSdkVersion 34
 
+    // Keep the reference copy out of the Driver Hub OpMode menu.
+    sourceSets.main.java.exclude 'org/firstinspires/ftc/teamcode/raahi/autos/blue/blueFlowerFixed.java'
+
     packagingOptions {
         jniLibs.useLegacyPackaging true
     }

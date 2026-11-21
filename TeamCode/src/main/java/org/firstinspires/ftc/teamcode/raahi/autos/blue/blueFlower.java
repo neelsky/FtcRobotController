@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.IMU;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -33,7 +32,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower 6", group = "Auto")
+@Autonomous(name = "Blue Flower 8", group = "Auto")
 public class blueFlower extends LinearOpMode {
 
 
@@ -50,9 +49,7 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotorEx intake;
 
-    // Issue 1: Use the same continuous-rotation servo as Shooter and TeleOp.
-    // private DcMotor transfer;
-    private CRServo transfer;
+    private DcMotor transfer;
 
     private Servo turret;
 
@@ -298,13 +295,11 @@ public class blueFlower extends LinearOpMode {
         backRight = hardwareMap.get(DcMotor.class, "backRight");
         pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        // Issue 1: Look up the transfer as a servo so INIT matches the robot configuration.
-        // transfer = hardwareMap.get(DcMotor.class, "transfer");
-        transfer = hardwareMap.get(CRServo.class, "transfer");
+        transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
         turret.setDirection(Servo.Direction.REVERSE);
         intake.setDirection(DcMotor.Direction.REVERSE);
-        // Issue 1: Keep the TeleOp direction because Shooter shares this servo.
+        // Keep the motor direction used by TeleOp. Shooter shares this transfer motor.
         // transfer.setDirection(DcMotor.Direction.REVERSE);
 
         turret.setPosition(turretCenterPos);
@@ -382,7 +377,7 @@ public class blueFlower extends LinearOpMode {
         if(intakeHelper){
 
             intake.setPower(0.5);
-            // Issue 1: Keep the intended pickup direction after removing the reversal.
+            // Positive power moves the transfer in the pickup direction used by TeleOp.
             // transfer.setPower(-0.3);
             transfer.setPower(0.3);
         }else{
