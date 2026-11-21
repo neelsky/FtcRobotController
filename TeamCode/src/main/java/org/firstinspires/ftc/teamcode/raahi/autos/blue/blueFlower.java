@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -17,7 +15,6 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import java.util.List;
 
 
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Aimer;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 
 
@@ -57,10 +54,8 @@ public class blueFlower extends LinearOpMode {
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
 
-    private IMU imu;
     private GoBildaPinpointDriver pinpoint;
 
-    private final Aimer aimer = new Aimer();
     private Shooter shooter;
 
 
@@ -308,14 +303,6 @@ public class blueFlower extends LinearOpMode {
 
 
 
-        //intialize imu
-        imu = hardwareMap.get(IMU.class, "imu");
-        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT,
-                RevHubOrientationOnRobot.UsbFacingDirection.UP)));
-        imu.resetYaw();
-
-
         frontLeft.setDirection(Constants.driveConstants.leftFrontMotorDirection);
         backLeft.setDirection(Constants.driveConstants.leftRearMotorDirection);
         frontRight.setDirection(Constants.driveConstants.rightFrontMotorDirection);
@@ -391,18 +378,6 @@ public class blueFlower extends LinearOpMode {
         }
 
 
-
-
-        //subsystem aiming
-        /*double turnRate = getTurnRate();
-        if(!outtakeHelper){
-            aimer.reset();
-            aimer.noteTurnRate(turnRate);
-        } else if (findUpTag() != null) {
-            aimer.updateFromCamera(heading, turnRate, vision.getAngle());
-        } else {
-            aimer.noteTurnRate(turnRate);
-        }*/
 
 
         double timeout = Double.MAX_VALUE;
@@ -676,13 +651,6 @@ public class blueFlower extends LinearOpMode {
 
         return tagFound;
     }
-
-    public double getTurnRate() {
-
-        return Math.abs(imu.getRobotAngularVelocity(AngleUnit.DEGREES).zRotationRate);
-
-    }
-
 
     private void runShooter(boolean shooting, int tagID) {
         if (!shooting) {
