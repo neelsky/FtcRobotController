@@ -180,8 +180,8 @@ public class blueFlower extends LinearOpMode {
 
 
         drive(-78.74,922,pi/2, false, false, firstTag, goalOneXMM, goalOneYMM);
-        drive(-88.9,1338.58, pi/2, true, false, firstTag, goalOneXMM, goalOneYMM);
-        drive(0,0,-pi/4, false, true, firstTag, goalOneXMM, goalOneYMM);
+        drive(-88.9,1338.58, pi/2, true, true, firstTag, goalOneXMM, goalOneYMM);
+
         LLResultTypes.FiducialResult upTag = findUpTag();
         if(time.seconds() > 22){
             drive(tileLength, tileLength, 0, true, false, secondTag, goalTwoXMM, goalTwoYMM);
@@ -189,7 +189,7 @@ public class blueFlower extends LinearOpMode {
             return;
         }
         if (upTag != null && upTag.getFiducialId() == firstTag) {
-            drive(0,0,0,false, true, firstTag, goalOneXMM, goalOneYMM);
+
             outtakeOn = true;
             //aim();
             // Alternative turretAim(firstTag, goalOneXMM, goalOneYMM);
