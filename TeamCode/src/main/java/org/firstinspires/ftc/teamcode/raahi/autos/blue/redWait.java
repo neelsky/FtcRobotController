@@ -166,8 +166,8 @@ public class redWait extends LinearOpMode {
             sleep(50);
             upTag = findUpTag();
             if (time.seconds() > 23){
-                drive(300, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
-                drive(300,-1100, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
+                drive(350, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
+                drive(350,-1100, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
                 return;
             }
         }
@@ -214,7 +214,7 @@ public class redWait extends LinearOpMode {
             distanceToTarget = distanceToTag(tagID) + outtakeXOffsetIn;
             int baseVelocity = Shooter.velocityForDistance(distanceToTarget);
             if (baseVelocity > 0) {
-                shooter.setGoal(baseVelocity + 70);
+                shooter.setGoal(baseVelocity + 50);
             } else if (shooter.getGoal() == 0) {
                 shooter.setGoal(Shooter.DEFAULT_VELOCITY + 50);
             }
