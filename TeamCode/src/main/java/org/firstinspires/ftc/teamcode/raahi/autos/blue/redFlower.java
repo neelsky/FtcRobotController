@@ -183,7 +183,7 @@ public class redFlower extends LinearOpMode {
 
         everythingOff();
 
-        drive(0, 610, 3 * pi / 2, true, false, firstTag);
+        drive(0, -610, 3 * pi / 2, true, false, firstTag);
         drive(0, 0, pi / 2, true, false, firstTag);
 
 
@@ -293,7 +293,7 @@ public class redFlower extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
-        turret.setDirection(Servo.Direction.FORWARD);
+        turret.setDirection(Servo.Direction.REVERSE);
         // Leave the turret free for manual positioning until START.
         if (turret instanceof PwmControl) {
             ((PwmControl) turret).setPwmDisable();

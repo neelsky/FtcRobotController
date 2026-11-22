@@ -65,7 +65,8 @@ public final class TurretAimAuto {
     public static int HEADING_SIGN_SETTING = 0;
     public static boolean HEADING_FROM_CAMERA = false;
     public static String HEADING_SIGN_FILE = "/sdcard/FIRST/glitch_heading_sign.txt";
-    public static String TURRET_DIRECTION_FILE = "/sdcard/FIRST/glitch_turret_direction_v2.txt";
+    // Flower's reversed servo uses its own direction calibration.
+    public static String TURRET_DIRECTION_FILE = "/sdcard/FIRST/glitch_turret_direction_auto.txt";
     public static double MIN_CAMERA_FLAT_IN = 10;
     public static double MAX_CAMERA_FLAT_IN = 160;
     public static double TURRET_SETTLE_S = 0.35;
