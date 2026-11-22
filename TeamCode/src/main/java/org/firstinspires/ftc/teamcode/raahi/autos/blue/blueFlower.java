@@ -67,8 +67,8 @@ public class blueFlower extends LinearOpMode {
     static final double goalTwoXMM = 2170;
     static final double goalTwoYMM = 0;
 
-    static final int firstTag = 40;
-    static final int secondTag = 44;
+    static final int firstTag = 44;
+    static final int secondTag = 40;
 
 
     static final double outtakeXOffsetIn = 0;

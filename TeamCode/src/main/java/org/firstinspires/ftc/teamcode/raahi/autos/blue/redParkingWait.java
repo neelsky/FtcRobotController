@@ -67,8 +67,8 @@ public class redParkingWait extends LinearOpMode {
     static final double goalTwoXMM = 2170;
     static final double goalTwoYMM = 0;
 
-    static final int firstTag = 32;
-    static final int secondTag = 36;
+    static final int firstTag = 36;
+    static final int secondTag = 32;
 
 
     static final double outtakeXOffsetIn = 0;
