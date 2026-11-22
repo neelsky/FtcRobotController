@@ -166,8 +166,8 @@ public class redWait extends LinearOpMode {
             sleep(50);
             upTag = findUpTag();
             if (time.seconds() > 23){
-                drive(350, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
-                drive(350,-1100, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
+                drive(320, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
+                drive(320,-1050, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
                 return;
             }
         }
