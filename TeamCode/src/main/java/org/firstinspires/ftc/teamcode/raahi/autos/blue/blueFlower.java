@@ -170,7 +170,7 @@ public class blueFlower extends LinearOpMode {
         // initial shooting
         /*waitForFlywheel(2.0);
         feedBalls(4);*/
-
+        turretAim(firstTag, goalOneXMM, goalOneYMM - 610);
         // Hold the centered turret for the opening shot from the starting position.
         runShooter(true, firstTag, false);
 
@@ -461,7 +461,7 @@ public class blueFlower extends LinearOpMode {
 
             // Issue 2: Convert Pinpoint's left and counterclockwise signs to the wheel mixer's signs.
             // setPower(speedX, speedY, turn);
-            setPower(speedX, -speedY, -turn);
+            setPower(speedX, speedY, -turn);
 
 
         }
