@@ -161,8 +161,6 @@ public class redWait extends LinearOpMode {
         waitForStart();
         time.reset();
 
-        drive(20,0,pi,false,false,secondTag, goalOneXMM, goalTwoXMM);
-
         LLResultTypes.FiducialResult upTag = findUpTag();
         while(opModeIsActive() && (upTag == null || upTag.getFiducialId() != secondTag)){
             sleep(50);

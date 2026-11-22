@@ -162,8 +162,6 @@ public class blueWait extends LinearOpMode {
         time.reset();
 
 
-        drive(20,0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
-
 
         LLResultTypes.FiducialResult upTag = findUpTag();
         while(opModeIsActive() && (upTag == null || upTag.getFiducialId() != secondTag)){
