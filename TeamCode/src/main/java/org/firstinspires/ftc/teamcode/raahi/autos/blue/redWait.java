@@ -165,6 +165,11 @@ public class redWait extends LinearOpMode {
         while(opModeIsActive() && (upTag == null || upTag.getFiducialId() != secondTag)){
             sleep(50);
             upTag = findUpTag();
+            if (time.seconds() > 23){
+                drive(300, 0, pi, false, false, secondTag, goalOneXMM, goalOneYMM);
+                drive(300,-1100, pi,false,false,secondTag, goalOneXMM, goalOneYMM);
+                return;
+            }
         }
         outtakeOn = true;
         runShooter(true, secondTag, false);
