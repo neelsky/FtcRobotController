@@ -19,7 +19,7 @@ import java.util.List;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAim;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAimAuto;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
 
 
@@ -52,7 +52,7 @@ public class redFlower extends LinearOpMode {
 
     private DcMotor transfer;
 
-    private TurretAim aim;
+    private TurretAimAuto aim;
     private Servo turret;
 
     private Limelight3A limelight;
@@ -148,7 +148,7 @@ public class redFlower extends LinearOpMode {
         setUpOdometry();
 
         pinpoint.update();
-        aim = TurretAim.createAuto(hardwareMap, Alliance.RED, fieldPose(pinpoint.getPosition()));
+        aim = new TurretAimAuto(hardwareMap, Alliance.RED, fieldPose(pinpoint.getPosition()));
         boolean manualCamera = aim.getVision() == null;
         if (manualCamera) {
             limelight.pipelineSwitch(Vision.PIPELINE);
@@ -163,7 +163,7 @@ public class redFlower extends LinearOpMode {
                 return;
             }
             time.reset();
-            turret.setPosition(TurretAim.TURRET_ZERO_POS);
+            turret.setPosition(TurretAimAuto.TURRET_ZERO_POS);
             if (turret instanceof PwmControl) {
                 ((PwmControl) turret).setPwmEnable();
             }
