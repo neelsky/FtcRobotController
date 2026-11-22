@@ -93,7 +93,6 @@ public class blueFlower extends LinearOpMode {
 
     static final double tileLength = 584.2;
 
-    private static final double HIVE_CENTER_Y_MM = goalOneYMM - 610;
 
     // Issue 4: These fields supported the camera pose reset. Pinpoint now keeps its own pose.
     // static final double startFieldRelativeXMM = 203.2;
@@ -590,14 +589,13 @@ public class blueFlower extends LinearOpMode {
     }
 
     private Pose fieldPose(Pose2D localPose) {
-        // Route +X points along blue field -Y, from tag 44's cell toward tag 40's cell.
-        // Align the midpoint of the route's two goal coordinates with the field hive pivot.
-        double hiveCenterXMM = (goalOneXMM + goalTwoXMM) / 2;
-        double x = FieldMap.PIVOT_X
-                + DistanceUnit.INCH.fromMm(localPose.getY(DistanceUnit.MM) - HIVE_CENTER_Y_MM);
-        double y = FieldMap.PIVOT_Y
-                - DistanceUnit.INCH.fromMm(localPose.getX(DistanceUnit.MM) - hiveCenterXMM);
-        return new Pose(x, y, localPose.getHeading(AngleUnit.RADIANS) - Math.PI / 2);
+        double tileIn = DistanceUnit.INCH.fromMm(tileLength);
+        // In the blue field frame, the goal is (1, 1.5) tiles from the starting robot center.
+        double x = FieldMap.PIVOT_X - tileIn + localPose.getY(DistanceUnit.INCH);
+        double y = FieldMap.PIVOT_Y + FieldMap.CELL_AIM_FROM_PIVOT_IN
+                - 1.5 * tileIn - localPose.getX(DistanceUnit.INCH);
+        double heading = localPose.getHeading(AngleUnit.RADIANS) - Math.PI / 2;
+        return new Pose(x, y, heading);
     }
 
     private void updateAim(Pose2D localPose, int tagID, boolean shooting) {
