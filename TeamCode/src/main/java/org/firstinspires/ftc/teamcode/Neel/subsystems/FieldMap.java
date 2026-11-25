@@ -15,7 +15,7 @@ public class FieldMap {
         return blueTag <= 41 ? 0 : 1;
     }
 
-    public static double viewerOffsetInches(int blueTag) {
+    public static double viewerOffsetCM(int blueTag) {
         double cm;
         switch (blueTag) {
             case 38: cm = 17; break;
@@ -28,10 +28,14 @@ public class FieldMap {
             case 45: cm = -17; break;
             default: cm = 0; break;
         }
-        return cm / 2.54;
+        return cm;
+    }
+    public static double viewerOffsetInches(int blueTag) {
+        return viewerOffsetCM(blueTag) / 2.54;
     }
 
-    public static double fieldXOffsetInches(int blueTag) {
+
+    public static double fieldXOffsetCM(int blueTag) {
         double cm;
         switch (blueTag) {
             case 38: cm = -17; break;
@@ -44,7 +48,11 @@ public class FieldMap {
             case 45: cm = -17; break;
             default: cm = 0; break;
         }
-        return cm / 2.54;
+        return cm;
+    }
+
+    public static double fieldXOffsetInches(int blueTag) {
+        return fieldXOffsetCM(blueTag) / 2.54;
     }
 
     public static double wrapDegrees(double angle) {
