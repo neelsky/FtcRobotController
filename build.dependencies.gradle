@@ -5,6 +5,7 @@ repositories {
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     implementation 'org.firstinspires.ftc:Inspection:11.1.0'
     implementation 'org.firstinspires.ftc:Blocks:11.1.0'
     implementation 'org.firstinspires.ftc:RobotCore:11.1.0'
