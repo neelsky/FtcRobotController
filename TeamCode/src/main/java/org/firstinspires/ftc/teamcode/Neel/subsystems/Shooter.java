@@ -8,11 +8,11 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class Shooter {
-    public static double F = 0.00072;
-    public static double P = 0.0052;
-    public static int FAR_VELOCITY = 1300;
+    public static double F = 0.0012;
+    public static double P = 0.005;
+    public static int FAR_VELOCITY = 700;
     public static int DEFAULT_VELOCITY = 600;
-    public static int MAX_VELOCITY = 2200;
+    public static int MAX_VELOCITY = 800;
     public static double MIN_DISTANCE_IN = 32;
     public static double MAX_DISTANCE_IN = 114;
 
