@@ -175,7 +175,6 @@ public class BasicTurret {
   }
 
   // --- State Getters ---
-
   public double getTargetAngleDeg() {
     return targetAngleDeg;
   }
