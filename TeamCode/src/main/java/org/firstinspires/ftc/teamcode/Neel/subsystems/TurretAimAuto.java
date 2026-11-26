@@ -6,11 +6,13 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
 
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.FIELD;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_X;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_Y;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.wrapDegrees;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.FIELD;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_X;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_Y;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.wrapDegrees;
 
 public final class TurretAimAuto {
     public static double TURRET_ZERO_POS = 0.5;

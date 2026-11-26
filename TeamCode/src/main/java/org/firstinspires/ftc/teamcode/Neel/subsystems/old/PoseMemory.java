@@ -1,7 +1,10 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
 import com.pedropathing.geometry.Pose;
 
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
+
+@Deprecated
 public class PoseMemory {
     private static Pose lastPose = null;
     private static Alliance lastAlliance = null;

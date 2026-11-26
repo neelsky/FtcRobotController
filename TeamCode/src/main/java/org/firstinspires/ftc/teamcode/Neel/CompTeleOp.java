@@ -2,12 +2,12 @@ package org.firstinspires.ftc.teamcode.Neel;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Aimer;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Aimer;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
 
 public abstract class CompTeleOp extends LinearOpMode {
     protected abstract Alliance alliance();

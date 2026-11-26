@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -8,10 +8,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class Vision {
     public static double TAG_HOLD_MS = 300;
     public static double FACE_MEMORY_MS = 3000;

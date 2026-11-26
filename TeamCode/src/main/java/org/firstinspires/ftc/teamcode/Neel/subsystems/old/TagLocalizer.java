@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -11,6 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class TagLocalizer {
     public static double MAX_STALENESS_MS = 100;
     public static double MIN_TAG_GAP_IN = 3;

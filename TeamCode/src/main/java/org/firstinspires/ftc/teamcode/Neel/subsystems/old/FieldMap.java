@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
+@Deprecated
 public class FieldMap {
     public static final double FIELD = 141.5;
     public static final double CENTER = FIELD / 2;

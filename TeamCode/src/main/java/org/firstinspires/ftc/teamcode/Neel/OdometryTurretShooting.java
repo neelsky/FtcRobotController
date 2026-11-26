@@ -7,7 +7,7 @@ import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.StatusLight;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAim;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.TurretAim;
 
 @TeleOp(name = "Odometry Turret Shooting", group = "Glitch")
 public class OdometryTurretShooting extends LinearOpMode {

@@ -1,7 +1,8 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+@Deprecated
 public class Aimer {
     public static double KP = 0.015;
     public static double KS = 0.06;

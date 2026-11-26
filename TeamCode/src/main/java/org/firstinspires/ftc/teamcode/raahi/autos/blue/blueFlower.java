@@ -9,7 +9,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -17,10 +16,10 @@ import java.util.List;
 
 
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAimAuto;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
 
 
 

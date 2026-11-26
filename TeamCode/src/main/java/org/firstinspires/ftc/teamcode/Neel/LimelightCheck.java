@@ -10,8 +10,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
 
 @TeleOp(name = "Limelight Check", group = "Glitch")
 public class LimelightCheck extends LinearOpMode {

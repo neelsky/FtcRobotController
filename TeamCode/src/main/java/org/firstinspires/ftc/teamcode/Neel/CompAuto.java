@@ -7,22 +7,22 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Aimer;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Aimer;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.PoseKeeper;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.CENTER;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.FIELD;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_X;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_Y;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.UP_TAGS_FROM_PIVOT_IN;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.wrapDegrees;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.CENTER;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.FIELD;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_X;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_Y;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.UP_TAGS_FROM_PIVOT_IN;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.wrapDegrees;
 
 public abstract class CompAuto extends LinearOpMode {
     protected abstract Alliance alliance();

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel.subsystems;
+package org.firstinspires.ftc.teamcode.Neel.subsystems.old;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -7,13 +7,16 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.PoseKeeper;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.FIELD;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_X;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.PIVOT_Y;
-import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.wrapDegrees;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.FIELD;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_X;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.PIVOT_Y;
+import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.wrapDegrees;
 
+@Deprecated
 public class TurretAim {
     public static double TURRET_ZERO_POS = 0.5;
     public static double TURRET_ZERO_FROM_FRONT_DEG = 180;
