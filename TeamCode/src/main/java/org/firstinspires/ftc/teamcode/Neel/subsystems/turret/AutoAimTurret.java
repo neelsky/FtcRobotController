@@ -6,12 +6,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.LimelightVision;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.map.FieldMapMetric;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.map.FieldMap;
 
 /**
  * AutoTurret controls automatic aiming of a turret using odometry (PedroPathing)
@@ -37,6 +35,7 @@ public class AutoAimTurret {
     private final LimelightVision vision;
     private Alliance alliance;
 
+    private Position targetPos;
     private double calculatedTargetAngleDeg = 0.0;
     private double distanceToTargetInches = 0.0;
 
@@ -87,17 +86,15 @@ public class AutoAimTurret {
         }
 
         // Query target position dynamically using FieldMapMetric (symmetric across colors)
-       Position targetPos = FieldMapMetric.getTargetFromPos(
-            DistanceUnit.METER.fromInches(robotPose.getX()),
-            DistanceUnit.METER.fromInches(robotPose.getY()));
+       this.targetPos = FieldMap.getTargetFromPos(robotPose.getX(), robotPose.getY());
 
         // If target is null, the robot is under the hive: do not make any adjustment to the turret
-        if (targetPos == null) {
+        if (this.targetPos == null) {
             aimSource = "Under Hive (No Adjustment)";
             return;
         }
 
-        OdometryAim odometryAim = aimWithOdometry(robotPose, targetPos);
+        OdometryAim odometryAim = aimWithOdometry(robotPose, this.targetPos);
         vision.update();
 
         // Fuse vision angle if valid, otherwise rely on odometry
@@ -133,11 +130,11 @@ public class AutoAimTurret {
           + TURRET_LEFT_OF_CENTER_IN * Math.cos(robotHeadingRad);
 
       // 2. Compute distance and bearing from turret to target
-      double dx = targetPos.x - turretWorldX;
-      double dy = targetPos.y - turretWorldY;
+      double dx = targetPos.unit.toInches(targetPos.x) - turretWorldX;
+      double dy = targetPos.unit.toInches(targetPos.y) - turretWorldY;
       aimData.distance = Math.hypot(dx, dy);
 
-      double targetBearingDeg = Math.toDegrees(Math.atan2(dy, dx));
+      double targetBearingDeg = -Math.toDegrees(Math.atan2(dx, dy));
 
       // 3. Compute target turret angle relative to robot heading
       aimData.angleDegree = normalizeDegrees(targetBearingDeg - robotHeadingDeg - TURRET_ZERO_FROM_FRONT_DEG);
@@ -168,6 +165,13 @@ public class AutoAimTurret {
      */
     public boolean isAimKnown() {
         return aimKnown;
+    }
+
+    /**
+     * Returns Position of current target.
+     */
+    public Position getTargetPos() {
+        return targetPos;
     }
 
     /**
@@ -228,6 +232,11 @@ public class AutoAimTurret {
      * Displays subsystem diagnostic telemetry.
      */
     public void addTelemetry(Telemetry telemetry) {
+        if (targetPos == null) {
+            telemetry.addData("Target Position", "null");
+        } else {
+            telemetry.addData("Target Position", "(%.1f, %.1f)", targetPos.x, targetPos.y);
+        }
         telemetry.addData("Turret Aim Source", aimSource);
         telemetry.addData("Turret Target Angle", "%.1f°", calculatedTargetAngleDeg);
         telemetry.addData("Turret Current Angle", "%.1f°", basicTurret.getCurrentAngleDeg());

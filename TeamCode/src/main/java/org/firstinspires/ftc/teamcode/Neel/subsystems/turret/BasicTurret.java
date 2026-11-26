@@ -19,7 +19,7 @@ public class BasicTurret {
 
   // Configuration settings
   private double servoRangeDegrees = DEFAULT_SERVO_RANGE_DEGREES;
-  private boolean clockwiseIsPositive = true; // true if higher servo position moves Clockwise (positive angle)
+  private boolean clockwiseIsPositive = false; // true if higher servo position moves Clockwise (positive angle)
 
   // Configurable angle limits in degrees (CCW negative, CW positive)
   private double minAngleDeg = -150.0; // Counterclockwise limit

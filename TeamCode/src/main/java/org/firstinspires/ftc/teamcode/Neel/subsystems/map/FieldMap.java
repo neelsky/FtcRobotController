@@ -5,7 +5,6 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 
 /**
@@ -16,18 +15,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
  * Looking at the field, left and right is X axis, right being positive.
  * Far and close to be Y axis, far to be positive.
  */
-public class FieldMapMetric {
+public class FieldMap {
 
-    public static final double MAX_X = 3.65;
-    public static final double MIN_X = -3.65;
-    public static final double MAX_Y = 3.65;
-    public static final double MIN_Y = -3.65;
+    public static final double MAX_X = 72;
+    public static final double MIN_X = -72;
+    public static final double MAX_Y = 72;
+    public static final double MIN_Y = -72;
 
-    public static final Position RIGHT_TARGET = new Position(DistanceUnit.METER, 0.395, -0.324, 0, 0);
-    public static final Position LEFT_TARGET = new Position(DistanceUnit.METER, -0.395, -0.324, 0, 0);
+    public static final Position RIGHT_TARGET = new Position(DistanceUnit.INCH, 15.56, -12.76, 0, 0);
+    public static final Position LEFT_TARGET = new Position(DistanceUnit.INCH, -15.56, -12.76, 0, 0);
 
-    public static final Position RIGHT_CORNER = new Position(DistanceUnit.METER, 3.465, -3.4, 0,0);
-    public static final Position LEFT_CORNER = new Position(DistanceUnit.METER, -3.465, -3.4, 0,0);
+    public static final Pose RIGHT_CORNER_POSE = new Pose( 64.75, -62.4, AngleUnit.Pif);
+    public static final Pose LEFT_CORNER_POSE = new Pose(-64.75, -62.4, AngleUnit.Pif);
 
     public Pose2D test;
     public static Position getTargetFromPos(double x, double y) {
@@ -40,7 +39,7 @@ public class FieldMapMetric {
         return LEFT_TARGET;
     }
 
-    public static double viewerOffset(int tag) {
+    public static double viewerOffsetInCM(int tag) {
         int blueTag = tag < 38? tag + 8 : tag;
         double cm;
         switch (blueTag) {
