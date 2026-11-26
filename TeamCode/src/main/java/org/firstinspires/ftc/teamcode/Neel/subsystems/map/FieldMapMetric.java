@@ -30,7 +30,10 @@ public class FieldMapMetric {
     public static final Position LEFT_CORNER = new Position(DistanceUnit.METER, -3.465, -3.4, 0,0);
 
     public Pose2D test;
-    public Position getTargetFromPos(double x, double y) {
+    public static Position getTargetFromPos(double x, double y) {
+        if (Math.abs(x) < Math.abs(RIGHT_TARGET.x) && Math.abs(y) < Math.abs(RIGHT_TARGET.y)) {
+            return null;
+        }
         if (x > 0) {
             return RIGHT_TARGET;
         }
@@ -54,8 +57,5 @@ public class FieldMapMetric {
         return cm;
     }
 
-    public static double toInch(double meter) {
-        return DistanceUnit.INCH.fromMeters(meter);
-    }
 
 }
