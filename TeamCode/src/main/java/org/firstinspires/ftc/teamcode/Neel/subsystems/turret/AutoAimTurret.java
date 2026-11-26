@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Neel.subsystems.turret;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -38,10 +39,13 @@ public class AutoAimTurret {
     private Position targetPos;
     private double calculatedTargetAngleDeg = 0.0;
     private double distanceToTargetInches = 0.0;
+    private double angularVelocityCompensation = 0.0;
 
     private boolean aimKnown = false;
     private boolean visionActive;
     private String aimSource = "None";
+    private double latency;
+    private ElapsedTime latencyTimer = new ElapsedTime();
 
     /**
      * Constructs AutoTurret using a HardwareMap and specified Alliance.
@@ -74,6 +78,7 @@ public class AutoAimTurret {
      * @param robotPose current robot pose (x, y, heading)
      */
     public void update(Pose robotPose) {
+
         if (follower != null && robotPose == null) {
             follower.updatePose();
             robotPose = follower.getPose();
@@ -111,8 +116,22 @@ public class AutoAimTurret {
 
         aimKnown = true;
 
-        basicTurret.setAngle(odometryAim.angleDegree);
+        calculatedTargetAngleDeg += updateAngularVelocityCompensation();
+
+        basicTurret.setAngle(calculatedTargetAngleDeg);
         // shooter.setDistance(distanceToTargetInches);
+    }
+
+    public void updateLatency() {
+        latency = latencyTimer.seconds();
+        latencyTimer.reset();
+    }
+    public double updateAngularVelocityCompensation() {
+        updateLatency();
+        double angularV = this.follower.getAngularVelocity();
+        this.angularVelocityCompensation = AngleUnit.DEGREES
+            .fromRadians(-angularV * latency);
+        return this.angularVelocityCompensation;
     }
 
     public OdometryAim aimWithOdometry(Pose robotPose, Position targetPos) {
@@ -242,5 +261,7 @@ public class AutoAimTurret {
         telemetry.addData("Turret Current Angle", "%.1f°", basicTurret.getCurrentAngleDeg());
         telemetry.addData("Distance to Target", "%.1f in", distanceToTargetInches);
         telemetry.addData("Turret Aimed", isAimed() ? "READY" : "TURNING");
+        telemetry.addData("Turn Compensation", this.angularVelocityCompensation);
+        telemetry.addData("Update Latency", latency);
     }
 }
