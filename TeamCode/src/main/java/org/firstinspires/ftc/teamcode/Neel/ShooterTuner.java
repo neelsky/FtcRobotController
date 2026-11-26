@@ -4,112 +4,124 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 
 @TeleOp(name = "Shooter Tuner", group = "Glitch")
 public class ShooterTuner extends LinearOpMode {
-    private double TARGET_VELOCITY = 1300;
-    private double P = 0.0;
-    private double I = 0.0;
-    private double D = 0.0;
-    private double F = 0.00117;
-    public static double TRANSFER_POWER = 1.0;
-    public static double INTAKE_POWER = -0.5;
+    private static final String[] NAMES = {"TARGET", "P", "I", "D", "F"};
+    private static final double[] STEPS = {50, 0.0002, 0.00005, 0.00002, 0.00002};
 
-    private double integral = 0;
-    private double lastError = 0;
+    private int selected = 0;
+    private int target = 1200;
     private boolean running = false;
-    private boolean aWasDown = false;
-    private boolean upWasDown = false;
-    private boolean downWasDown = false;
-    private static final double F_STEP = 0.00005;
-    private static final double P_STEP = 0.0002;
-    private boolean leftWasDown = false;
-    private boolean rightWasDown = false;
-    private boolean yWasDown = false;
+    private boolean aWas, upWas, downWas, leftWas, rightWas, xWas;
 
     @Override
     public void runOpMode() {
-        DcMotorEx outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-        DcMotor transfer = hardwareMap.get(DcMotor.class, "transfer");
-        transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        transfer.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        DcMotorEx intake = hardwareMap.get(DcMotorEx.class, "intake");
-        outtake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        outtake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        Shooter shooter = new Shooter(hardwareMap);
+        Intake intake = new Intake(hardwareMap);
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
 
-        telemetry.addLine("A = flywheel on/off. Hold right trigger = feed. Dpad up/down = F. Bumpers or dpad left/right = P. Y = target 500/600/700.");
+        telemetry.addLine("SHOOTER TUNER");
+        telemetry.addLine("A = flywheel on/off | dpad left/right = pick TARGET, P, I, D or F | dpad up/down = change it");
+        telemetry.addLine("hold right bumper = 10x bigger steps | hold right trigger = feed | X = set the picked value to 0");
         telemetry.update();
         waitForStart();
 
-        ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive()) {
-            if (gamepad1.a && !aWasDown) {
+            if (gamepad1.a && !aWas) {
                 running = !running;
-                integral = 0;
-                lastError = 0;
             }
-            aWasDown = gamepad1.a;
-            if (gamepad1.dpad_up && !upWasDown) {
-                F += F_STEP;
+            if (gamepad1.dpad_right && !rightWas) {
+                selected = (selected + 1) % NAMES.length;
             }
-            if (gamepad1.dpad_down && !downWasDown) {
-                F = Math.max(0, F - F_STEP);
+            if (gamepad1.dpad_left && !leftWas) {
+                selected = (selected + NAMES.length - 1) % NAMES.length;
             }
-            boolean pUp = gamepad1.dpad_right || gamepad1.right_bumper;
-            boolean pDown = gamepad1.dpad_left || gamepad1.left_bumper;
-            if (pUp && !rightWasDown) {
-                P += P_STEP;
+            double step = STEPS[selected] * (gamepad1.right_bumper ? 10 : 1);
+            if (gamepad1.dpad_up && !upWas) {
+                change(step);
             }
-            if (pDown && !leftWasDown) {
-                P = Math.max(0, P - P_STEP);
+            if (gamepad1.dpad_down && !downWas) {
+                change(-step);
             }
-            if (gamepad1.y && !yWasDown) {
-                TARGET_VELOCITY = TARGET_VELOCITY >= 700 ? 500 : TARGET_VELOCITY + 100;
+            if (gamepad1.x && !xWas) {
+                setValue(0);
             }
-            rightWasDown = pUp;
-            leftWasDown = pDown;
-            yWasDown = gamepad1.y;
-            upWasDown = gamepad1.dpad_up;
-            downWasDown = gamepad1.dpad_down;
+            aWas = gamepad1.a;
+            upWas = gamepad1.dpad_up;
+            downWas = gamepad1.dpad_down;
+            leftWas = gamepad1.dpad_left;
+            rightWas = gamepad1.dpad_right;
+            xWas = gamepad1.x;
 
-            double velocity = Math.abs(outtake.getVelocity());
-            double dt = Math.max(timer.seconds(), 1e-3);
-            timer.reset();
-
-            double power = 0;
-            double error = 0;
-            if (running) {
-                error = TARGET_VELOCITY - velocity;
-                integral += error * dt;
-                double derivative = (error - lastError) / dt;
-                lastError = error;
-                power = F * TARGET_VELOCITY + P * error + I * integral + D * derivative;
-                power = Math.max(0, Math.min(1, power));
-            }
-            outtake.setPower(power);
-
+            shooter.setGoal(running ? target : 0);
+            shooter.update();
             boolean feeding = gamepad1.right_trigger > 0.1;
-            transfer.setPower(feeding ? TRANSFER_POWER : 0);
-            intake.setPower(feeding ? INTAKE_POWER : 0);
+            if (feeding) {
+                shooter.forceFeed();
+                intake.setIntake(Intake.OUT_POWER);
+            } else {
+                shooter.stopFeeder();
+                intake.setIntake(0);
+            }
 
-            panels.addData("version", "v3");
-            panels.addData("buttons", (gamepad1.left_bumper ? "LB " : "") + (gamepad1.right_bumper ? "RB " : "")
-                    + (gamepad1.dpad_left ? "LEFT " : "") + (gamepad1.dpad_right ? "RIGHT " : "")
-                    + (gamepad1.dpad_up ? "UP " : "") + (gamepad1.dpad_down ? "DOWN " : ""));
-            panels.addData("target", running ? TARGET_VELOCITY : 0);
-            panels.addData("velocity", velocity);
+            double error = running ? target - shooter.getVelocity() : 0;
+            for (int i = 0; i < NAMES.length; i++) {
+                telemetry.addData((i == selected ? ">> " : "   ") + NAMES[i], valueText(i));
+            }
+            telemetry.addData("flywheel", running ? "ON" : "off (press A)");
+            telemetry.addData("velocity", "%.0f  (error %.0f)", shooter.getVelocity(), error);
+            telemetry.addData("power", "%.3f", shooter.getPower());
+            telemetry.addData("step", "%s per press%s", stepText(selected, step), gamepad1.right_bumper ? " (10x)" : "");
+            telemetry.addLine("When it's good, copy P, I, D and F into the top of Shooter.java.");
+
+            panels.addData("target", running ? target : 0);
+            panels.addData("velocity", shooter.getVelocity());
             panels.addData("error", error);
-            panels.addData("power", power);
-            panels.addData("F", String.format("%.5f", F));
-            panels.addData("P", String.format("%.4f", P));
+            panels.addData("power", shooter.getPower());
+            panels.addData("P", String.format("%.5f", Shooter.P));
+            panels.addData("I", String.format("%.5f", Shooter.I));
+            panels.addData("D", String.format("%.5f", Shooter.D));
+            panels.addData("F", String.format("%.5f", Shooter.F));
             panels.update(telemetry);
         }
-        outtake.setPower(0);
-        transfer.setPower(0);
-        intake.setPower(0);
+        shooter.stop();
+        intake.stop();
+    }
+
+    private double getValue(int i) {
+        switch (i) {
+            case 0: return target;
+            case 1: return Shooter.P;
+            case 2: return Shooter.I;
+            case 3: return Shooter.D;
+            default: return Shooter.F;
+        }
+    }
+
+    private void setValue(double value) {
+        value = Math.max(0, value);
+        switch (selected) {
+            case 0: target = (int) Math.round(Math.min(value, Shooter.MAX_VELOCITY)); break;
+            case 1: Shooter.P = value; break;
+            case 2: Shooter.I = value; break;
+            case 3: Shooter.D = value; break;
+            default: Shooter.F = value; break;
+        }
+    }
+
+    private void change(double amount) {
+        setValue(getValue(selected) + amount);
+    }
+
+    private String valueText(int i) {
+        return i == 0 ? String.valueOf(target) : String.format("%.5f", getValue(i));
+    }
+
+    private String stepText(int i, double step) {
+        return i == 0 ? String.format("%.0f", step) : String.format("%.5f", step);
     }
 }

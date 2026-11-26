@@ -8,9 +8,15 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class Shooter {
-    public static double F = 0.00072;
     public static double P = 0.0052;
-    public static int FAR_VELOCITY = 1300;
+    public static double I = 0;
+    public static double D = 0;
+    public static double F = 0.00072;
+    public static double MAX_I_POWER = 0.2;
+    public static double RESET_I_ON_GOAL_CHANGE = 100;
+    public static double FORMULA_SLOPE = 4.086;
+    public static double FORMULA_OFFSET = 666;
+    public static double FORMULA_SCALE = 0.62;
     public static int DEFAULT_VELOCITY = 600;
     public static int MAX_VELOCITY = 2200;
     public static double MIN_DISTANCE_IN = 32;
@@ -28,12 +34,16 @@ public class Shooter {
     private final DcMotorEx transfer;
     private final ElapsedTime pauseTimer = new ElapsedTime();
     private final ElapsedTime spinUpTimer = new ElapsedTime();
+    private final ElapsedTime loopTimer = new ElapsedTime();
 
     private int goalVelocity = 0;
     private double velocity = 0;
     private double power = 0;
     private double peakVelocity = 0;
     private boolean feeding = false;
+    private double integral = 0;
+    private double lastError = 0;
+    private int lastGoal = 0;
 
     public Shooter(HardwareMap hardwareMap) {
         outtake = hardwareMap.get(DcMotorEx.class, "outtake");
@@ -52,7 +62,7 @@ public class Shooter {
             return -1;
         }
         double d = Math.max(MIN_DISTANCE_IN, Math.min(MAX_DISTANCE_IN, distanceIn));
-        return Math.min(FAR_VELOCITY, MAX_VELOCITY);
+        return Math.min((int) Math.round((FORMULA_SLOPE * d + FORMULA_OFFSET) * FORMULA_SCALE), MAX_VELOCITY);
     }
 
     public void setGoal(int velocity) {
@@ -84,12 +94,31 @@ public class Shooter {
 
     public void update() {
         velocity = Math.abs(outtake.getVelocity());
+        double dt = Math.max(1e-3, Math.min(0.1, loopTimer.seconds()));
+        loopTimer.reset();
         power = 0;
+        if (goalVelocity <= 0 || Math.abs(goalVelocity - lastGoal) > RESET_I_ON_GOAL_CHANGE) {
+            integral = 0;
+            lastError = goalVelocity - velocity;
+        }
+        lastGoal = goalVelocity;
         if (goalVelocity > 0) {
-            power = F * goalVelocity + P * (goalVelocity - velocity);
+            double error = goalVelocity - velocity;
+            integral += error * dt;
+            if (I > 0) {
+                double maxIntegral = MAX_I_POWER / I;
+                integral = Math.max(-maxIntegral, Math.min(maxIntegral, integral));
+            }
+            double derivative = (error - lastError) / dt;
+            lastError = error;
+            power = F * goalVelocity + P * error + I * integral + D * derivative;
             power = Math.max(0, Math.min(1, power));
         }
         outtake.setPower(power);
+    }
+
+    public double getPower() {
+        return power;
     }
 
     public void startFeeding() {

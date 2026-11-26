@@ -44,6 +44,8 @@ public class TurretAim {
     public static double RELOCATE_MAX_TURN_DEG_S = 30;
 
     public static boolean USE_CAMERA_AIM = true;
+    public static boolean AIM_WITH_CAMERA_VIEW = false;
+    public static double CENTER_TAGS_DEG = 5;
     public static double MAX_FRAME_AGE_MS = 300;
     public static double CAMERA_CHECK_MIN_TURN_DEG = 4;
     public static double CAMERA_CHECK_WINDOW_S = 3;
@@ -130,6 +132,8 @@ public class TurretAim {
     private double turretSentDeg = 0;
     private double turretSentVel = 0;
     private boolean robotStill = false;
+    private boolean odometryLocked = false;
+    private double lastTagFixAt = -1e9;
     private double turretEstimatePos = 0.5;
     private double distanceToCell = 0;
     private boolean aimKnown = false;
@@ -361,8 +365,16 @@ public class TurretAim {
         return alliance;
     }
 
+    public double getFieldHeadingRad() {
+        return currentPose().getHeading();
+    }
+
     public Follower getFollower() {
         return follower;
+    }
+
+    public void setOdometryLocked(boolean locked) {
+        odometryLocked = locked;
     }
 
     public Vision getVision() {
@@ -429,7 +441,7 @@ public class TurretAim {
     }
 
     private void resyncButton() {
-        if (resyncPressed) {
+        if (resyncPressed && !odometryLocked) {
             Pose spot = startSpot();
             Pose before = currentPose();
             setPoseEverywhere(spot);
@@ -443,7 +455,7 @@ public class TurretAim {
     }
 
     private void tagRelocate(boolean always) {
-        if (localizer == null) {
+        if (localizer == null || odometryLocked) {
             return;
         }
         boolean still = always || (Math.hypot(vx, vy) < RELOCATE_MAX_SPEED_IN_S && Math.abs(omegaDeg) < RELOCATE_MAX_TURN_DEG_S);
@@ -462,6 +474,7 @@ public class TurretAim {
             setPoseEverywhere(found);
             poseJumped(before, found);
             located = true;
+            lastTagFixAt = clock.seconds();
             positionSource = "AprilTags";
         }
     }
@@ -660,7 +673,7 @@ public class TurretAim {
             lastCameraSeenAt = now;
         }
 
-        if (located && cameraTrusted && got3d && seenCell >= 0) {
+        if (located && cameraTrusted && got3d && seenCell >= 0 && !odometryLocked) {
             correctPoseFromCamera(captureTime, seenCell, now);
             p = blueFramePose();
         }
@@ -683,7 +696,8 @@ public class TurretAim {
                 return;
             }
         }
-        if (holdUntilCamera && (now - holdUntilCameraSince > HOLD_FOR_CAMERA_S || lastSpotUpdateAt > holdUntilCameraSince)) {
+        double lastCameraFix = AIM_WITH_CAMERA_VIEW ? lastSpotUpdateAt : lastTagFixAt;
+        if (holdUntilCamera && (now - holdUntilCameraSince > HOLD_FOR_CAMERA_S || lastCameraFix > holdUntilCameraSince)) {
             holdUntilCamera = false;
         }
         boolean newFrame = cameraFresh && captureTime > lastFrameCapture + 0.002;
@@ -693,7 +707,7 @@ public class TurretAim {
         boolean usable = newFrame && cameraTrusted && validCell;
         boolean spotLive = validCell && haveCameraSpot[seenCell] && seenCell == lastCameraCell
                 && now - lastSpotUpdateAt <= CAMERA_SPOT_LIVE_S;
-        if (cameraFresh && (usable || spotLive)) {
+        if (AIM_WITH_CAMERA_VIEW && cameraFresh && (usable || spotLive)) {
             double[] then = poseAt(captureTime);
             if (usable && checkHeadingFromCamera(captureTime, then, seenCell)) {
                 commandTurret(turretCommandPos, dt);
@@ -763,11 +777,18 @@ public class TurretAim {
             turretCanReach = true;
             targetCell = seenCell;
             aimSource = "LIMELIGHT (found the tags: holding still so the turret settles)";
+            if (!AIM_WITH_CAMERA_VIEW) {
+                aimSource = "LIMELIGHT (found the tags: finding where the robot is)";
+                if (usable && Math.abs(vision.getAngle()) > CENTER_TAGS_DEG) {
+                    double centered = turretActualDeg() - vision.getAngle();
+                    turretCommandDeg = Math.max(-TURRET_LIMIT_DEG, Math.min(TURRET_LIMIT_DEG, centered));
+                }
+            }
             smoothCommandDeg = turretCommandDeg;
             heldCommandDeg = turretCommandDeg;
             commandTurret(angleToPosition(turretCommandDeg), dt);
             return;
-        } else if (located && haveCameraSpot[targetCell] && targetCell == lastCameraCell && secondsSinceSeen < CAMERA_MEMORY_S) {
+        } else if (AIM_WITH_CAMERA_VIEW && located && haveCameraSpot[targetCell] && targetCell == lastCameraCell && secondsSinceSeen < CAMERA_MEMORY_S) {
             double[] spot = cameraSpot[targetCell];
             aimX = spot[0];
             aimY = spot[1];
@@ -783,7 +804,7 @@ public class TurretAim {
             rise = lastRise;
             addTrim = true;
             aimSource = cameraFresh ? "ODOMETRY (camera sees tags, waiting for a steady view)" : "ODOMETRY (camera can't see the tags)";
-        } else if (lastCameraCell >= 0 && secondsSinceSeen < CAMERA_MEMORY_S) {
+        } else if (AIM_WITH_CAMERA_VIEW && lastCameraCell >= 0 && secondsSinceSeen < CAMERA_MEMORY_S) {
             double[] spot = cameraSpot[lastCameraCell];
             targetCell = lastCameraCell;
             aimX = spot[0];
@@ -973,6 +994,7 @@ public class TurretAim {
             errorY -= along * Math.sin(bearing);
         }
         lastCameraErrorIn = Math.hypot(errorX, errorY);
+        lastTagFixAt = now;
         if (now - lastCorrectionAt < POSE_CORRECTION_PERIOD_S) {
             return;
         }

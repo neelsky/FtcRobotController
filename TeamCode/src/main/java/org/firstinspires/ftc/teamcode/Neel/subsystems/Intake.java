@@ -6,8 +6,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 public class Intake {
-    public static double IN_POWER = -0.5;
-    public static double OUT_POWER = 0.5;
+    public static double IN_POWER = -0.7;
+    public static double OUT_POWER = 0.7;
     public static double SIDES_IN_POWER = -1;
     public static double SIDES_OUT_POWER = 1;
     public static String FLOWER_NAME = "flowerIntake";

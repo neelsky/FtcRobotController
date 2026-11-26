@@ -2,11 +2,11 @@ package org.firstinspires.ftc.teamcode.Neel;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.StatusLight;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAim;
 
 @TeleOp(name = "Odometry Turret Shooting", group = "Glitch")
@@ -16,14 +16,6 @@ public class OdometryTurretShooting extends LinearOpMode {
     public static double TURRET_DEGREES_PER_UNIT = TurretAim.TURRET_DEGREES_PER_UNIT;
     public static boolean TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
 
-    public static String LIGHT_NAME = "light";
-    public static double LIGHT_GREEN = 0.5;
-    public static double LIGHT_BLUE = 0.611;
-    public static double CLOSE_SHOT_DISTANCE_IN = 50;
-    public static double CLOSE_SHOT_VELOCITY = 1200;
-    public static double FAR_SHOT_DISTANCE_IN = 65;
-    public static double MID_SHOT_VELOCITY = 1300;
-    public static double FAR_SHOT_VELOCITY = 1330;
     public static double MULTIPLIER_STEP = 0.02;
     public static double MULTIPLIER_MIN = 0.5;
     public static double MULTIPLIER_MAX = 1.5;
@@ -32,7 +24,7 @@ public class OdometryTurretShooting extends LinearOpMode {
     private Drivetrain drivetrain;
     private Shooter shooter;
     private Intake intake;
-    private Servo light;
+    private StatusLight light;
     private double shotMultiplier = 1.0;
     private boolean multUpWas = false;
     private boolean multDownWas = false;
@@ -45,16 +37,14 @@ public class OdometryTurretShooting extends LinearOpMode {
         drivetrain = new Drivetrain(hardwareMap, false);
         shooter = new Shooter(hardwareMap);
         intake = new Intake(hardwareMap);
-        try {
-            light = hardwareMap.get(Servo.class, LIGHT_NAME);
-        } catch (Exception e) {
-            light = null;
-        }
+        light = new StatusLight(hardwareMap);
 
         while (opModeInInit()) {
             aim.initLoop(gamepad1.x, gamepad1.b, gamepad1.back);
             TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+            light.showAimed(false);
             aim.addInitTelemetry(telemetry);
+            telemetry.addData("lights", light.status());
             telemetry.update();
         }
 
@@ -99,6 +89,7 @@ public class OdometryTurretShooting extends LinearOpMode {
                     : shooting && !flywheelAtSpeed() ? "AIMED - flywheel spinning up"
                     : "YES");
             aim.addTelemetry(telemetry);
+            telemetry.addData("lights", light.status());
             telemetry.addData("flower intake", intake.hasFlower() ? "gamepad 2 dpad right / left" : "NOT FOUND: add a servo named flowerIntake to the config");
             telemetry.addData("shot multiplier", "x%.2f   (gamepad 2: dpad up/down = %.2f steps, A = reset)", shotMultiplier, MULTIPLIER_STEP);
             shooter.addTelemetry(telemetry);
@@ -111,10 +102,7 @@ public class OdometryTurretShooting extends LinearOpMode {
     }
 
     private void updateLight() {
-        if (light == null) {
-            return;
-        }
-        light.setPosition(aim.isAimed() ? LIGHT_GREEN : LIGHT_BLUE);
+        light.showAimed(aim.isAimed());
     }
 
     private boolean flywheelAtSpeed() {
@@ -138,16 +126,7 @@ public class OdometryTurretShooting extends LinearOpMode {
     }
 
     public static double shotVelocityFor(double distanceIn) {
-        if (Double.isNaN(distanceIn) || distanceIn <= 0) {
-            return -1;
-        }
-        if (distanceIn <= CLOSE_SHOT_DISTANCE_IN) {
-            return CLOSE_SHOT_VELOCITY;
-        }
-        if (distanceIn < FAR_SHOT_DISTANCE_IN) {
-            return MID_SHOT_VELOCITY;
-        }
-        return FAR_SHOT_VELOCITY;
+        return Shooter.velocityForDistance(distanceIn);
     }
 
     private void setShotGoal(double distanceIn) {

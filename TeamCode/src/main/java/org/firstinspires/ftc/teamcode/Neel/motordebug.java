@@ -76,7 +76,7 @@ public class motordebug extends LinearOpMode {
             transfer.setVelocity(-1200);
         }
         if(gamepad1.b){
-            transfer.setVelocity(1200);
+            transfer.setVelocity(560);
         }
         if(gamepad1.dpad_left){
             outtake.setVelocity(800);
