@@ -8,17 +8,17 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 public class Shooter {
-    public static double P = 0.0052;
+    public static double P = 0.005;
     public static double I = 0;
     public static double D = 0;
-    public static double F = 0.00072;
+    public static double F = 0.0012;
     public static double MAX_I_POWER = 0.2;
     public static double RESET_I_ON_GOAL_CHANGE = 100;
     public static double FORMULA_SLOPE = 4.086;
     public static double FORMULA_OFFSET = 666;
     public static double FORMULA_SCALE = 0.62;
     public static int DEFAULT_VELOCITY = 600;
-    public static int MAX_VELOCITY = 2200;
+    public static int MAX_VELOCITY = 800;
     public static double MIN_DISTANCE_IN = 32;
     public static double MAX_DISTANCE_IN = 114;
 

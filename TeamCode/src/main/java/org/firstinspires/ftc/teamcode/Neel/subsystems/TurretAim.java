@@ -17,10 +17,10 @@ import static org.firstinspires.ftc.teamcode.Neel.subsystems.FieldMap.wrapDegree
 public class TurretAim {
     public static double TURRET_ZERO_POS = 0.5;
     public static double TURRET_ZERO_FROM_FRONT_DEG = 180;
-    public static double TURRET_LIMIT_DEG = 150;
-    public static double TURRET_MIN_POS = 0.25;
-    public static double TURRET_MAX_POS = 0.75;
-    public static double TURRET_DEGREES_PER_UNIT = 600;
+    public static double TURRET_LIMIT_DEG = 157;
+    public static double TURRET_MIN_POS = 0;
+    public static double TURRET_MAX_POS = 1;
+    public static double TURRET_DEGREES_PER_UNIT = 272.73;
     public static double TURRET_SWING_HYSTERESIS_DEG = 20;
     public static boolean TURRET_HIGHER_IS_LEFT = false;
     public static double TURRET_FORWARD_OF_CENTER_IN = 0;
