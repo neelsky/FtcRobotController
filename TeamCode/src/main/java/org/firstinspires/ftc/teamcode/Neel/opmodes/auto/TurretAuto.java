@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel;
+package org.firstinspires.ftc.teamcode.Neel.opmodes.auto;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
@@ -7,6 +7,7 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.Neel.opmodes.teleops.OdometryTurretShooting;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;

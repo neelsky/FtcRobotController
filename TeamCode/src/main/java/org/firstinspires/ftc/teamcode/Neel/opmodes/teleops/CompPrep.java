@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel;
+package org.firstinspires.ftc.teamcode.Neel.opmodes.teleops;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;

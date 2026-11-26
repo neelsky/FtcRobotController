@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Neel;
+package org.firstinspires.ftc.teamcode.Neel.opmodes.teleops;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -9,16 +9,10 @@ import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.StatusLight;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.old.TurretAim;
 
-@TeleOp(name = "Odometry Turret Shooting", group = "Glitch")
-public class OdometryTurretShooting extends LinearOpMode {
-    public static double TURRET_ZERO_POS = TurretAim.TURRET_ZERO_POS;
-    public static double TURRET_LIMIT_DEG = TurretAim.TURRET_LIMIT_DEG;
-    public static double TURRET_DEGREES_PER_UNIT = TurretAim.TURRET_DEGREES_PER_UNIT;
-    public static boolean TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
-
-    public static double MULTIPLIER_STEP = 0.02;
-    public static double MULTIPLIER_MIN = 0.5;
-    public static double MULTIPLIER_MAX = 1.5;
+@TeleOp(name = "Kekoa Drive", group = "Glitch")
+public class KekoaDrive extends LinearOpMode {
+    public static double STRAFE_BOOST = 1.1;
+    public static boolean ALWAYS_REV = true;
 
     private TurretAim aim;
     private Drivetrain drivetrain;
@@ -29,6 +23,7 @@ public class OdometryTurretShooting extends LinearOpMode {
     private boolean multUpWas = false;
     private boolean multDownWas = false;
     private boolean intakePulling = false;
+    private double forwardHeadingRad = 0;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -41,21 +36,24 @@ public class OdometryTurretShooting extends LinearOpMode {
 
         while (opModeInInit()) {
             aim.initLoop(gamepad1.x, gamepad1.b, gamepad1.back);
-            TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+            OdometryTurretShooting.TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
             light.showAimed(false);
+            telemetry.addLine("KEKOA DRIVE: field oriented. Gamepad 1 Y = forward is the way the robot faces now.");
             aim.addInitTelemetry(telemetry);
             telemetry.addData("lights", light.status());
             telemetry.update();
         }
 
         aim.start();
+        aim.getFollower().updatePose();
+        forwardHeadingRad = aim.getFieldHeadingRad();
         while (opModeIsActive()) {
             boolean shooting = gamepad2.right_trigger > 0.1;
             aim.update(gamepad1.back, gamepad1.right_stick_x, shooting, gamepad2.y);
-            TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+            OdometryTurretShooting.TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
 
             runMultiplierButtons();
-            if (!shooting) {
+            if (!shooting && !ALWAYS_REV) {
                 shooter.setGoal(0);
             } else if (aim.isAimKnown()) {
                 setShotGoal(aim.getDistanceToCell());
@@ -69,11 +67,16 @@ public class OdometryTurretShooting extends LinearOpMode {
                 shooter.runTriggerFeed(shooting, aim.isAimed());
             }
 
-            drivetrain.drive(-gamepad1.left_stick_y, gamepad1.left_stick_x * 1.1, gamepad1.right_stick_x);
+            if (gamepad1.y) {
+                forwardHeadingRad = aim.getFieldHeadingRad();
+            }
+            driveFieldOriented();
             runIntakeButtons();
 
             if (gamepad1.right_bumper) {
-                shooter.stop();
+                if (!ALWAYS_REV) {
+                    shooter.stop();
+                }
                 intake.setIntake(0);
                 intakePulling = false;
             }
@@ -86,12 +89,15 @@ public class OdometryTurretShooting extends LinearOpMode {
                     : !aim.canReach() ? "NO - turret at its limit"
                     : !aim.isTurretReady() ? "NO - turret turning"
                     : !aim.cameraAgrees() ? "NO - camera says the turret isn't there yet"
-                    : shooting && !flywheelAtSpeed() ? "AIMED - flywheel spinning up"
+                    : !flywheelAtSpeed() ? "AIMED - flywheel spinning up"
                     : "YES");
+            telemetry.addData("driving", "field oriented (gamepad 1 Y = reset forward) | robot %.0f° from forward",
+                    Math.toDegrees(wrap(aim.getFieldHeadingRad() - forwardHeadingRad)));
+            telemetry.addData("flywheel", ALWAYS_REV ? "always revved up" : "spins up when you shoot");
             aim.addTelemetry(telemetry);
             telemetry.addData("lights", light.status());
             telemetry.addData("flower intake", intake.hasFlower() ? "gamepad 2 dpad right / left" : "NOT FOUND: add a servo named flowerIntake to the config");
-            telemetry.addData("shot multiplier", "x%.2f   (gamepad 2: dpad up/down = %.2f steps, A = reset)", shotMultiplier, MULTIPLIER_STEP);
+            telemetry.addData("shot multiplier", "x%.2f   (gamepad 2: dpad up/down = %.2f steps, A = reset)", shotMultiplier, OdometryTurretShooting.MULTIPLIER_STEP);
             shooter.addTelemetry(telemetry);
             telemetry.update();
         }
@@ -99,6 +105,24 @@ public class OdometryTurretShooting extends LinearOpMode {
         shooter.stop();
         intake.stop();
         aim.stop();
+    }
+
+    private void driveFieldOriented() {
+        double forward = -gamepad1.left_stick_y;
+        double right = gamepad1.left_stick_x;
+        double turn = gamepad1.right_stick_x;
+        double theta = aim.getFieldHeadingRad() - forwardHeadingRad;
+        double cos = Math.cos(theta);
+        double sin = Math.sin(theta);
+        double robotForward = forward * cos - right * sin;
+        double robotRight = forward * sin + right * cos;
+        drivetrain.drive(robotForward, robotRight * STRAFE_BOOST, turn);
+    }
+
+    private static double wrap(double radians) {
+        while (radians > Math.PI) radians -= 2 * Math.PI;
+        while (radians <= -Math.PI) radians += 2 * Math.PI;
+        return radians;
     }
 
     private void updateLight() {
@@ -113,10 +137,10 @@ public class OdometryTurretShooting extends LinearOpMode {
 
     private void runMultiplierButtons() {
         if (gamepad2.dpad_up && !multUpWas) {
-            shotMultiplier = Math.min(MULTIPLIER_MAX, shotMultiplier + MULTIPLIER_STEP);
+            shotMultiplier = Math.min(OdometryTurretShooting.MULTIPLIER_MAX, shotMultiplier + OdometryTurretShooting.MULTIPLIER_STEP);
         }
         if (gamepad2.dpad_down && !multDownWas) {
-            shotMultiplier = Math.max(MULTIPLIER_MIN, shotMultiplier - MULTIPLIER_STEP);
+            shotMultiplier = Math.max(OdometryTurretShooting.MULTIPLIER_MIN, shotMultiplier - OdometryTurretShooting.MULTIPLIER_STEP);
         }
         if (gamepad2.a) {
             shotMultiplier = 1.0;
@@ -125,12 +149,8 @@ public class OdometryTurretShooting extends LinearOpMode {
         multDownWas = gamepad2.dpad_down;
     }
 
-    public static double shotVelocityFor(double distanceIn) {
-        return Shooter.velocityForDistance(distanceIn);
-    }
-
     private void setShotGoal(double distanceIn) {
-        double velocity = shotVelocityFor(distanceIn);
+        double velocity = OdometryTurretShooting.shotVelocityFor(distanceIn);
         if (velocity <= 0) {
             shooter.useDefaultIfOff();
             return;

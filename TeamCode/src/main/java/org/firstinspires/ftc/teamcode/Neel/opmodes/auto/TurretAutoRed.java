@@ -1,12 +1,11 @@
-package org.firstinspires.ftc.teamcode.Neel;
+package org.firstinspires.ftc.teamcode.Neel.opmodes.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
-@Disabled
-@Autonomous(name = "AutoRed", group = "Glitch")
-public class AutoRed extends CompAuto {
+
+@Autonomous(name = "Turret Auto Red", group = "Glitch", preselectTeleOp = "Odometry Turret Shooting")
+public class TurretAutoRed extends TurretAuto {
     @Override
     protected Alliance alliance() {
         return Alliance.RED;
