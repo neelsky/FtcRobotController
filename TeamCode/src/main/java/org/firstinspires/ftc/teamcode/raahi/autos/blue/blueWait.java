@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
+import com.pedropathing.follower.FollowerConstants;
+import com.pedropathing.control.FilteredPIDFController;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -8,11 +10,14 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import java.util.List;
+
+
+import com.pedropathing.control.FilteredPIDFCoefficients;
 
 
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
@@ -29,12 +34,12 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Wait V7.3.4", group = "Auto")
+@Autonomous(name = "Blue Wait V2", group = "Auto")
 public class blueWait extends LinearOpMode {
 
 
 
-    // Pinpoint takes the forward pod's Y offset first, then the strafe pod's X offset.
+
     double xoffset = -15.0;
     double yoffset = -106.0;
 
@@ -80,6 +85,7 @@ public class blueWait extends LinearOpMode {
     static final double maxPower = 0.6;
     static final double minPower = 0.12;
     static final double distanceOffset = 0.002;
+    static final double maxDrivePowerCorrection = 0.05;
     static final double headingOffset = 1.24;
 
     static final double timePerBall = 1.08;
@@ -110,10 +116,14 @@ public class blueWait extends LinearOpMode {
 
 
 
-    public static double NEW_P = 0.0042;
-    public static double NEW_I = 0.0;
-    public static double NEW_D = 0.0;
-    public static double NEW_F = 0.00072;
+    public static final double NEW_P = 0.025;
+    public static final double NEW_I = 0.0;
+    public static final double NEW_D = 0.00001;
+    public static final double NEW_F = 0.01;
+    public static final double NEW_T = 0.6;
+
+    public static FollowerConstants followerConstants = new FollowerConstants()
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(NEW_P,NEW_I,NEW_D,NEW_T,NEW_F));
 
 
     public static final double turretCenterPos = 0.5;
@@ -189,7 +199,7 @@ public class blueWait extends LinearOpMode {
         /*waitForFlywheel(2.0);
         feedBalls(4);*/
 
-        // The centered turret already points at the goal in the starting position.
+
 
 
 
@@ -267,7 +277,7 @@ public class blueWait extends LinearOpMode {
         turret = hardwareMap.get(Servo.class, "turret");
         turret.setDirection(Servo.Direction.REVERSE);
         intake.setDirection(DcMotor.Direction.REVERSE);
-        // Keep the motor direction used by TeleOp. Shooter shares this transfer motor.
+        // Keep the motor direction used by Neel
         // transfer.setDirection(DcMotor.Direction.REVERSE);
 
         turret.setPosition(turretCenterPos);
@@ -295,7 +305,7 @@ public class blueWait extends LinearOpMode {
         pinpoint.resetPosAndIMU();
         sleep(300);
 
-        // The chassis starts facing backward relative to the waypoint coordinate frame.
+        // The chassis starts facing backward
         pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
                 AngleUnit.RADIANS, Math.PI));
 
@@ -338,7 +348,7 @@ public class blueWait extends LinearOpMode {
         if(intakeHelper){
 
             intake.setPower(0.5);
-            // Positive power moves the transfer in the pickup direction used by TeleOp.
+            // Positive power moves the transfer properly TeST
             // transfer.setPower(-0.3);
             transfer.setPower(0.3);
         }else{
@@ -358,6 +368,8 @@ public class blueWait extends LinearOpMode {
         boolean firstTime = true;
         ElapsedTime driveTimer = new ElapsedTime();
         ElapsedTime driveTelemetryTimer = new ElapsedTime();
+        FilteredPIDFController driveSpeedPidf = new FilteredPIDFController(
+                Constants.followerConstants.coefficientsDrivePIDF);
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
@@ -417,7 +429,22 @@ public class blueWait extends LinearOpMode {
                 double sin = Math.sin(currentHeading);
                 double forwardErr =  xError * cos + yError * sin;
                 double leftErr = -xError * sin + yError * cos;
-                double speed = Math.max(minPower, Math.min(maxPower, neededDistance * distanceOffset));
+                double basePower = Math.max(minPower, Math.min(maxPower, neededDistance * distanceOffset));
+                double speed = basePower;
+                double targetSpeed = DistanceUnit.INCH.fromMm(driveMmPerSec) * basePower / maxPower;
+
+                double measuredSpeed = (pinpoint.getVelX(DistanceUnit.INCH) * xError
+                        + pinpoint.getVelY(DistanceUnit.INCH) * yError) / neededDistance;
+                if (Double.isFinite(measuredSpeed)) {
+                    driveSpeedPidf.updateFeedForwardInput(basePower / maxPower);
+                    driveSpeedPidf.updateError(targetSpeed - measuredSpeed);
+                    double correction = driveSpeedPidf.run();
+                    if (Double.isFinite(correction)) {
+                        correction = Math.max(-maxDrivePowerCorrection,
+                                Math.min(maxDrivePowerCorrection, correction));
+                        speed = Math.max(0, Math.min(maxPower, basePower + correction));
+                    }
+                }
                 speedX = (forwardErr / neededDistance) * speed;
                 speedY = (leftErr / neededDistance) * speed;
             }
@@ -606,7 +633,7 @@ public class blueWait extends LinearOpMode {
             }
             */
 
-            // Use each camera frame once so the drive and feeder loops can keep running.
+
             long frameMs = result.getControlHubTimeStamp();
             if (frameMs != lastTurretFrameMs) {
                 lastTurretFrameMs = frameMs;
