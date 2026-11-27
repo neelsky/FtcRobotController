@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -17,9 +16,9 @@ import java.util.List;
 
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.TurretAimAuto;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Transfer;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Turret;
 
 
 
@@ -33,32 +32,23 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower V1.8.3", group = "Auto")
+@Autonomous(name = "Blue Flower V2", group = "Auto")
 public class blueFlower extends LinearOpMode {
-
-
-
-    // Pinpoint takes the forward pod's Y offset first, then the strafe pod's X offset.
-    double xoffset = -15.0;
-    double yoffset = -106.0;
-
-    private DcMotorEx outtake;
-
 
 
 
     private DcMotorEx intake;
 
-    private DcMotor transfer;
+    private Transfer transfer;
 
-    private TurretAimAuto aim;
+    private Turret aim;
     private Servo turret;
 
     private Limelight3A limelight;
 
     private DcMotor frontLeft, frontRight, backLeft, backRight;
 
-    private GoBildaPinpointDriver pinpoint;
+    private Pose startPose;
 
     private Shooter shooter;
 
@@ -138,16 +128,9 @@ public class blueFlower extends LinearOpMode {
     @Override
     public void runOpMode() {
 
+        startPose = flowerStartPose();
+        aim = new Turret(hardwareMap, Alliance.BLUE, startPose);
         initializeMotors();
-        setUpOdometry();
-
-        pinpoint.update();
-        aim = new TurretAimAuto(hardwareMap, Alliance.BLUE, fieldPose(pinpoint.getPosition()));
-        boolean manualCamera = aim.getVision() == null;
-        if (manualCamera) {
-            limelight.pipelineSwitch(Vision.PIPELINE);
-            limelight.start();
-        }
 
         try {
             telemetry.addLine("Blue Flower ready");
@@ -157,7 +140,7 @@ public class blueFlower extends LinearOpMode {
                 return;
             }
             time.reset();
-            turret.setPosition(TurretAimAuto.TURRET_ZERO_POS);
+            turret.setPosition(Turret.TURRET_ZERO_POS);
             if (turret instanceof PwmControl) {
                 ((PwmControl) turret).setPwmEnable();
             }
@@ -166,9 +149,6 @@ public class blueFlower extends LinearOpMode {
         } finally {
             everythingOff();
             aim.stop();
-            if (manualCamera) {
-                limelight.stop();
-            }
         }
     }
 
@@ -222,13 +202,6 @@ public class blueFlower extends LinearOpMode {
 
 
 
-    private double headingToGoal() {
-        pinpoint.update();
-        Pose2D p = pinpoint.getPosition();
-        double dx = goalXMM - p.getX(DistanceUnit.MM);
-        double dy = goalYMM - p.getY(DistanceUnit.MM);
-        return Math.atan2(dy, dx);
-    }
 
 
     private void updateShooter(int tagID) {
@@ -266,11 +239,6 @@ public class blueFlower extends LinearOpMode {
 
 
     private void initializeMotors() {
-        outtake = hardwareMap.get(DcMotorEx.class, "outtake");
-
-
-
-
         telemetry.setMsTransmissionInterval(11);
 
 
@@ -283,20 +251,16 @@ public class blueFlower extends LinearOpMode {
         frontRight = hardwareMap.get(DcMotor.class, "frontRight");
         backLeft = hardwareMap.get(DcMotor.class, "backLeft");
         backRight = hardwareMap.get(DcMotor.class, "backRight");
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        transfer = hardwareMap.get(DcMotor.class, "transfer");
         turret = hardwareMap.get(Servo.class, "turret");
-        turret.setDirection(Servo.Direction.REVERSE);
         // Leave the turret free for manual positioning until START.
         if (turret instanceof PwmControl) {
             ((PwmControl) turret).setPwmDisable();
         }
         intake.setDirection(DcMotor.Direction.REVERSE);
-        // Keep the motor direction used by TeleOp. Shooter shares this transfer motor.
-        // transfer.setDirection(DcMotor.Direction.REVERSE);
 
         shooter = new Shooter(hardwareMap);
+        transfer = new Transfer(hardwareMap);
 
 
 
@@ -309,19 +273,6 @@ public class blueFlower extends LinearOpMode {
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
-
-    }
-
-    private void setUpOdometry(){
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
-        pinpoint.setOffsets(xoffset, yoffset, DistanceUnit.MM);
-        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        pinpoint.resetPosAndIMU();
-        sleep(300);
-
-        // The chassis starts facing backward relative to the waypoint coordinate frame.
-        pinpoint.setPosition(new Pose2D(DistanceUnit.MM, 0, 0,
-                AngleUnit.RADIANS, 3 * Math.PI / 2));
 
     }
 
@@ -362,11 +313,9 @@ public class blueFlower extends LinearOpMode {
         if(intakeHelper){
 
             intake.setPower(0.5);
-            // Positive power moves the transfer in the pickup direction used by TeleOp.
-            // transfer.setPower(-0.3);
-            transfer.setPower(0.3);
+            transfer.runBackward();
         }else{
-            transfer.setPower(0);
+            transfer.stop();
             intake.setPower(0);
         }
         if(outtakeHelper){
@@ -385,9 +334,8 @@ public class blueFlower extends LinearOpMode {
 
 
         while(opModeIsActive() &&  driveTimer.seconds() < timeout){
-            pinpoint.update();
-            Pose2D currentPosition = pinpoint.getPosition();
-            updateAim(currentPosition, tag, false);
+            aim.update(false, 0, false, false);
+            Pose2D currentPosition = routePose();
             updateShooter(tag);
             double currentX = currentPosition.getX(DistanceUnit.MM);
             double currentY = currentPosition.getY(DistanceUnit.MM);
@@ -407,7 +355,7 @@ public class blueFlower extends LinearOpMode {
                         targetX, targetY, Math.toDegrees(targetHeading));
                 telemetry.addData("Drive error", "X %+.0f mm, Y %+.0f mm, heading %+.1f deg",
                         xError, yError, Math.toDegrees(headingError));
-                aim.addTelemetryAuto(telemetry);
+                aim.addTelemetry(telemetry);
                 telemetry.update();
                 driveTelemetryTimer.reset();
             }
@@ -524,6 +472,7 @@ public class blueFlower extends LinearOpMode {
         outtakeOn = false;
         setPower(0, 0, 0);
         shooter.stop();
+        transfer.stop();
         intake.setPower(0);
     }
 
@@ -587,30 +536,29 @@ public class blueFlower extends LinearOpMode {
         drive(parkXMM, parkYMM, 0, true, false, secondTag);
     }
 
-    private Pose fieldPose(Pose2D localPose) {
+    private Pose flowerStartPose() {
         double tileIn = DistanceUnit.INCH.fromMm(tileLength);
-        // In the blue field frame, the goal is (1, 1.5) tiles from the starting robot center.
-        double x = FieldMap.PIVOT_X - tileIn + localPose.getY(DistanceUnit.INCH);
-        double y = FieldMap.PIVOT_Y + FieldMap.CELL_AIM_FROM_PIVOT_IN
-                - 1.5 * tileIn - localPose.getX(DistanceUnit.INCH);
-        double heading = localPose.getHeading(AngleUnit.RADIANS) - Math.PI / 2;
-        return new Pose(x, y, heading);
+        double x = FieldMap.PIVOT_X - tileIn;
+        double y = FieldMap.PIVOT_Y + FieldMap.CELL_AIM_FROM_PIVOT_IN - 1.5 * tileIn;
+        return new Pose(x, y, Math.PI);
     }
 
-    private void updateAim(Pose2D localPose, int tagID, boolean shooting) {
-        int cell = FieldMap.clusterOf(Alliance.BLUE.toBlueTag(tagID));
-        aim.updateFromPoseAuto(fieldPose(localPose), cell, shooting);
+    private Pose2D routePose() {
+        Pose fieldPose = aim.getFollower().getPose();
+        double x = startPose.getY() - fieldPose.getY();
+        double y = fieldPose.getX() - startPose.getX();
+        double heading = turnAngle(fieldPose.getHeading() - startPose.getHeading() + 3 * pi / 2);
+        return new Pose2D(DistanceUnit.INCH, x, y, AngleUnit.RADIANS, heading);
     }
 
     private void runShooter(int tagID) {
         outtakeOn = true;
-        shooter.stopFeeder();
+        transfer.stop();
 
         ElapsedTime flywheelTimer = new ElapsedTime();
         ElapsedTime aimSettle = new ElapsedTime();
         while (opModeIsActive() && flywheelTimer.seconds() < 2.0) {
-            pinpoint.update();
-            updateAim(pinpoint.getPosition(), tagID, true);
+            aim.update(false, 0, true, false);
             updateShooter(tagID);
             if (!aim.isAimed()) {
                 aimSettle.reset();
@@ -619,32 +567,31 @@ public class blueFlower extends LinearOpMode {
                     && Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) {
                 break;
             }
-            aim.addTelemetryAuto(telemetry);
+            aim.addTelemetry(telemetry);
             shooter.addTelemetry(telemetry);
             telemetry.update();
             sleep(50);
         }
 
-        shooter.startFeeding();
+        transfer.startFeeding();
         ElapsedTime shootTimer = new ElapsedTime();
         double shootSeconds = 5;
 
         try {
             while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
-                pinpoint.update();
-                updateAim(pinpoint.getPosition(), tagID, true);
+                aim.update(false, 0, true, false);
                 updateShooter(tagID);
                 boolean aimReady = aim.isAimed();
                 intake.setPower(aimReady ? -0.5 : 0);
-                shooter.runFeeder(aimReady);
+                transfer.runFeeder(shooter, aimReady);
                 telemetry.addData("Shot aim", aimReady ? "Ready" : "Waiting for turret");
-                aim.addTelemetryAuto(telemetry);
+                aim.addTelemetry(telemetry);
                 shooter.addTelemetry(telemetry);
                 telemetry.update();
             }
         } finally {
             intake.setPower(0);
-            shooter.stopFeeder();
+            transfer.stop();
         }
     }
 
