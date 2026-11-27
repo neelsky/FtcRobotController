@@ -3,26 +3,28 @@ package org.firstinspires.ftc.teamcode.Neel.opmodes.teleops;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.Drivetrain;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.Intake;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Transfer;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.StatusLight;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.old.TurretAim;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Turret;
 
 @TeleOp(name = "Odometry Turret Shooting", group = "Glitch")
 public class OdometryTurretShooting extends LinearOpMode {
-    public static double TURRET_ZERO_POS = TurretAim.TURRET_ZERO_POS;
-    public static double TURRET_LIMIT_DEG = TurretAim.TURRET_LIMIT_DEG;
-    public static double TURRET_DEGREES_PER_UNIT = TurretAim.TURRET_DEGREES_PER_UNIT;
-    public static boolean TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+    public static double TURRET_ZERO_POS = Turret.TURRET_ZERO_POS;
+    public static double TURRET_LIMIT_DEG = Turret.TURRET_LIMIT_DEG;
+    public static double TURRET_DEGREES_PER_UNIT = Turret.TURRET_DEGREES_PER_UNIT;
+    public static boolean TURRET_HIGHER_IS_LEFT = Turret.TURRET_HIGHER_IS_LEFT;
 
     public static double MULTIPLIER_STEP = 0.02;
     public static double MULTIPLIER_MIN = 0.5;
     public static double MULTIPLIER_MAX = 1.5;
 
-    private TurretAim aim;
+    private Turret aim;
     private Drivetrain drivetrain;
     private Shooter shooter;
+    private Transfer transfer;
     private Intake intake;
     private StatusLight light;
     private double shotMultiplier = 1.0;
@@ -33,15 +35,16 @@ public class OdometryTurretShooting extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry.setMsTransmissionInterval(11);
-        aim = new TurretAim(hardwareMap);
+        aim = new Turret(hardwareMap);
         drivetrain = new Drivetrain(hardwareMap, false);
         shooter = new Shooter(hardwareMap);
+        transfer = new Transfer(hardwareMap);
         intake = new Intake(hardwareMap);
         light = new StatusLight(hardwareMap);
 
         while (opModeInInit()) {
             aim.initLoop(gamepad1.x, gamepad1.b, gamepad1.back);
-            TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+            TURRET_HIGHER_IS_LEFT = Turret.TURRET_HIGHER_IS_LEFT;
             light.showAimed(false);
             aim.addInitTelemetry(telemetry);
             telemetry.addData("lights", light.status());
@@ -52,7 +55,7 @@ public class OdometryTurretShooting extends LinearOpMode {
         while (opModeIsActive()) {
             boolean shooting = gamepad2.right_trigger > 0.1;
             aim.update(gamepad1.back, gamepad1.right_stick_x, shooting, gamepad2.y);
-            TURRET_HIGHER_IS_LEFT = TurretAim.TURRET_HIGHER_IS_LEFT;
+            TURRET_HIGHER_IS_LEFT = Turret.TURRET_HIGHER_IS_LEFT;
 
             runMultiplierButtons();
             if (!shooting) {
@@ -64,9 +67,9 @@ public class OdometryTurretShooting extends LinearOpMode {
             }
             shooter.update();
             if (gamepad2.left_trigger > 0.1) {
-                shooter.forceFeed();
+                transfer.forceFeed();
             } else {
-                shooter.runTriggerFeed(shooting, aim.isAimed());
+                transfer.runTriggerFeed(shooter, shooting, aim.isAimed());
             }
 
             drivetrain.drive(-gamepad1.left_stick_y, gamepad1.left_stick_x * 1.1, gamepad1.right_stick_x);
@@ -74,11 +77,12 @@ public class OdometryTurretShooting extends LinearOpMode {
 
             if (gamepad1.right_bumper) {
                 shooter.stop();
+                transfer.stop();
                 intake.setIntake(0);
                 intakePulling = false;
             }
-            if (intakePulling && !shooter.isFeeding() && gamepad2.left_trigger <= 0.1) {
-                shooter.runTransferBackward();
+            if (intakePulling && !transfer.isFeeding() && gamepad2.left_trigger <= 0.1) {
+                transfer.runBackward();
             }
 
             updateLight();
@@ -93,10 +97,12 @@ public class OdometryTurretShooting extends LinearOpMode {
             telemetry.addData("flower intake", intake.hasFlower() ? "gamepad 2 dpad right / left" : "NOT FOUND: add a servo named flowerIntake to the config");
             telemetry.addData("shot multiplier", "x%.2f   (gamepad 2: dpad up/down = %.2f steps, A = reset)", shotMultiplier, MULTIPLIER_STEP);
             shooter.addTelemetry(telemetry);
+            transfer.addTelemetry(telemetry);
             telemetry.update();
         }
 
         shooter.stop();
+        transfer.stop();
         intake.stop();
         aim.stop();
     }

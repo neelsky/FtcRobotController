@@ -5,8 +5,9 @@ import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.Intake;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Transfer;
 
 @TeleOp(name = "Shooter Tuner", group = "Glitch")
 public class ShooterTuner extends LinearOpMode {
@@ -21,6 +22,7 @@ public class ShooterTuner extends LinearOpMode {
     @Override
     public void runOpMode() {
         Shooter shooter = new Shooter(hardwareMap);
+        Transfer transfer = new Transfer(hardwareMap);
         Intake intake = new Intake(hardwareMap);
         TelemetryManager panels = PanelsTelemetry.INSTANCE.getTelemetry();
 
@@ -61,10 +63,10 @@ public class ShooterTuner extends LinearOpMode {
             shooter.update();
             boolean feeding = gamepad1.right_trigger > 0.1;
             if (feeding) {
-                shooter.forceFeed();
+                transfer.forceFeed();
                 intake.setIntake(Intake.OUT_POWER);
             } else {
-                shooter.stopFeeder();
+                transfer.stop();
                 intake.setIntake(0);
             }
 
@@ -89,6 +91,7 @@ public class ShooterTuner extends LinearOpMode {
             panels.update(telemetry);
         }
         shooter.stop();
+        transfer.stop();
         intake.stop();
     }
 

@@ -9,12 +9,13 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Neel.opmodes.teleops.OdometryTurretShooting;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.Alliance;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Drivetrain;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.Drivetrain;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.Intake;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Shooter;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Transfer;
 import org.firstinspires.ftc.teamcode.Neel.subsystems.StatusLight;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.old.TurretAim;
-import org.firstinspires.ftc.teamcode.Neel.subsystems.old.Vision;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.Turret;
+import org.firstinspires.ftc.teamcode.Neel.subsystems.robot.turret.aim.LimelightAim;
 
 import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.CENTER;
 import static org.firstinspires.ftc.teamcode.Neel.subsystems.old.FieldMap.FIELD;
@@ -59,10 +60,11 @@ public abstract class TurretAuto extends LinearOpMode {
     private static final int AUDIENCE = 0;
     private static final int REAR = 1;
 
-    private TurretAim aim;
+    private Turret aim;
     private Follower follower;
     private Drivetrain drivetrain;
     private Shooter shooter;
+    private Transfer transfer;
     private Intake intake;
     private StatusLight light;
 
@@ -82,11 +84,11 @@ public abstract class TurretAuto extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         telemetry.setMsTransmissionInterval(11);
         setUpPoses();
-        aim = new TurretAim(hardwareMap, alliance(), pose(startX, startY, startH));
-        aim.setOdometryLocked(true);
+        aim = new Turret(hardwareMap, alliance(), pose(startX, startY, startH));
         follower = aim.getFollower();
         drivetrain = new Drivetrain(hardwareMap, false);
         shooter = new Shooter(hardwareMap);
+        transfer = new Transfer(hardwareMap);
         intake = new Intake(hardwareMap);
         light = new StatusLight(hardwareMap);
 
@@ -146,6 +148,7 @@ public abstract class TurretAuto extends LinearOpMode {
 
         step = "parking";
         shooter.stop();
+        transfer.stop();
         intake.stop();
         double parkY = PARK_Y - PARK_EDGE_SHIFT_IN;
         if (chosenCell == AUDIENCE) {
@@ -162,14 +165,13 @@ public abstract class TurretAuto extends LinearOpMode {
 
     private void setUpPoses() {
         double r = ROBOT_HALF_IN;
-        double camFwd = Vision.CAMERA_FORWARD_OF_CENTER_IN;
 
         startX = CENTER + r + 1;
         startY = FIELD - r;
         startH = -90;
 
         shootAudienceX = PIVOT_X;
-        shootAudienceY = PIVOT_Y - UP_TAGS_FROM_PIVOT_IN - SHOOT_TAG_DISTANCE_IN - camFwd;
+        shootAudienceY = PIVOT_Y - UP_TAGS_FROM_PIVOT_IN - SHOOT_TAG_DISTANCE_IN;
 
         ballsY = FIELD - r - BALLS_WALL_GAP_IN;
         ballsStartX = FIELD - r - 0.5 - BALLS_SWEEP_IN;
@@ -178,7 +180,7 @@ public abstract class TurretAuto extends LinearOpMode {
         backOffY = ballsY - 4;
 
         checkX = PIVOT_X - CHECK_SIDE_SHIFT_IN;
-        checkY = PIVOT_Y + UP_TAGS_FROM_PIVOT_IN + CHECK_TAG_DISTANCE_IN + camFwd;
+        checkY = PIVOT_Y + UP_TAGS_FROM_PIVOT_IN + CHECK_TAG_DISTANCE_IN;
 
         parkX = FIELD - r - 0.5;
     }
@@ -223,6 +225,7 @@ public abstract class TurretAuto extends LinearOpMode {
         telemetry.addData("match time", "%.1f s", matchTimer.seconds());
         aim.addTelemetry(telemetry);
         shooter.addTelemetry(telemetry);
+        transfer.addTelemetry(telemetry);
         telemetry.update();
     }
 
@@ -252,7 +255,7 @@ public abstract class TurretAuto extends LinearOpMode {
                 shooter.setGoal(0);
             }
             shooter.update();
-            shooter.stopFeeder();
+            transfer.stop();
             if (intakeOn) {
                 intake.setIntake(AUTO_INTAKE_POWER);
             }
@@ -278,10 +281,7 @@ public abstract class TurretAuto extends LinearOpMode {
     }
 
     private boolean seesHiveTag(double seconds) {
-        Vision vision = aim.getVision();
-        if (vision == null) {
-            return false;
-        }
+        LimelightAim vision = aim.getLimelight();
         int readings = 0;
         ElapsedTime timer = new ElapsedTime();
         while (opModeIsActive() && timer.seconds() < seconds) {
@@ -322,7 +322,7 @@ public abstract class TurretAuto extends LinearOpMode {
         }
 
         ElapsedTime shootTimer = new ElapsedTime();
-        shooter.startFeeding();
+        transfer.startFeeding();
         intake.setIntake(AUTO_INTAKE_POWER);
         while (opModeIsActive() && shootTimer.seconds() < shootSeconds && matchTimer.seconds() < PARK_START_S) {
             holdStill(true);
@@ -330,12 +330,12 @@ public abstract class TurretAuto extends LinearOpMode {
             shooter.update();
             boolean aimOk = settledInTime ? aim.isAimed()
                     : aim.isAimKnown() && aim.canReach() && aim.isTurretReady();
-            shooter.runFeeder(aimOk);
+            transfer.runFeeder(shooter, aimOk);
             telemetry.addData("shooting", "%.1f / %.1f s%s", shootTimer.seconds(), shootSeconds, aimOk ? "" : " (waiting for the turret)");
             showTelemetry();
         }
 
-        shooter.stopFeeder();
+        transfer.stop();
         intake.setIntake(0);
     }
 
@@ -344,6 +344,7 @@ public abstract class TurretAuto extends LinearOpMode {
         follower.breakFollowing();
         drivetrain.stop();
         shooter.stop();
+        transfer.stop();
         intake.stop();
         aim.stop();
         light.showAimed(false);
