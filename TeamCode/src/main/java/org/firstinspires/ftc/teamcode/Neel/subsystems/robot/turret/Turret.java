@@ -71,6 +71,10 @@ public class Turret {
     private String aimSource = "none";
     private int searchStep = 0;
     private boolean searchWas = false;
+    private boolean visionOnly;
+    private static final double sweepSpeed = 42;
+    private static final double tagLossGracePeriod = 0.65;
+    private double lastTagAt = Double.NEGATIVE_INFINITY;
 
     public Turret(HardwareMap hardwareMap) {
         odometry = new OdometryAim(hardwareMap);
@@ -96,7 +100,15 @@ public class Turret {
         odometry.update(false, dt);
         commandDeg = 0;
         moveServo(dt);
-        readCamera();
+        if (visionOnly) {
+            updateLimelight();
+        } else {
+            readCamera();
+        }
+    }
+
+    public void enableVisionOnlyAiming() {
+        visionOnly = true;
     }
 
     public void start() {
@@ -117,6 +129,11 @@ public class Turret {
         }
         double dt = nextDt();
         odometry.update(followerAlreadyUpdated, dt);
+        if (visionOnly) {
+            aimFromLiveTag(dt);
+            moveServo(dt);
+            return;
+        }
         readCamera();
         if (searchButton && !searchWas) {
             searchStep = 1;
@@ -136,8 +153,40 @@ public class Turret {
         return dt;
     }
 
-    private void readCamera() {
+    private void aimFromLiveTag(double dt) {
+        updateLimelight();
+        double now = clock.seconds();
+        aimKnown = limelight.sees();
+        if (!aimKnown) {
+            distanceToCell = -1;
+            if (now - lastTagAt < tagLossGracePeriod) {
+                commandDeg = sentDeg;
+                aimSource = "holding for a live tag";
+            } else {
+                aimSource = "sweeping for a live tag";
+                sweep(dt, sweepSpeed);
+            }
+            return;
+        }
+
+        lastTagAt = now;
+        searchStep = 0;
+        aimSource = "live Limelight tag";
+        distanceToCell = limelight.getDistanceIn();
+        double error = AIM_TRIM_DEG - limelight.getCenterTxDeg();
+        cameraAgrees = Math.abs(error) <= READY_DEG;
+        double frameAngle = angleAt(now - limelight.getAgeMs() / 1000.0);
+        double target = frameAngle + error;
+        canReach = Math.abs(target) <= TURRET_LIMIT_DEG;
+        commandDeg = Math.max(-TURRET_LIMIT_DEG, Math.min(TURRET_LIMIT_DEG, target));
+    }
+
+    private void updateLimelight() {
         limelight.update(odometry.getPose().getHeading(), estimateDeg, PIVOT_FORWARD_IN, PIVOT_LEFT_IN);
+    }
+
+    private void readCamera() {
+        updateLimelight();
         if (!limelight.sees()) {
             cameraAgrees = true;
             return;
@@ -203,8 +252,15 @@ public class Turret {
             commandDeg = sentDeg;
             return;
         }
+        sweep(dt, SEARCH_SPEED_DEG_PER_S);
+    }
+
+    private void sweep(double dt, double speedDegPerSecond) {
+        if (searchStep == 0) {
+            searchStep = 1;
+        }
         double end = searchStep == 1 ? TURRET_LIMIT_DEG : -TURRET_LIMIT_DEG;
-        double stepDeg = SEARCH_SPEED_DEG_PER_S * dt;
+        double stepDeg = speedDegPerSecond * dt;
         commandDeg += Math.max(-stepDeg, Math.min(stepDeg, end - commandDeg));
         if (Math.abs(end - commandDeg) < 0.5) {
             searchStep = searchStep == 1 ? 2 : 0;

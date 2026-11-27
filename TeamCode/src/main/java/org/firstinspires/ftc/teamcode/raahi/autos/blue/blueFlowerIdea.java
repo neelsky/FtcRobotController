@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.raahi.autos.blue;
 
 import com.pedropathing.control.FilteredPIDFController;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -34,7 +33,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 
 
-@Autonomous(name = "Blue Flower Idea V2 ", group = "Auto")
+@Autonomous(name = "Blue Flower Idea V1", group = "Auto")
 public class blueFlowerIdea extends LinearOpMode {
 
 
@@ -65,8 +64,8 @@ public class blueFlowerIdea extends LinearOpMode {
     static final double goalTwoXMM = 2069.8;
     static final double goalTwoYMM = 0;
 
-    static final int firstTag = 44;
-    static final int secondTag = 40;
+    static final int firstTag = 40;
+    static final int secondTag = 44;
 
 
     static final double outtakeXOffsetIn = 0;
@@ -138,20 +137,20 @@ public class blueFlowerIdea extends LinearOpMode {
 
         startPose = flowerStartPose();
         aim = new Turret(hardwareMap, Alliance.BLUE, startPose);
+        aim.enableVisionOnlyAiming();
         initializeMotors();
 
         try {
-            telemetry.addLine("Blue Flower Idea ready");
-            telemetry.update();
-            waitForStart();
+            while (opModeInInit()) {
+                aim.initLoop(false, false, false);
+                telemetry.addLine("Blue Flower Idea ready");
+                aim.addInitTelemetry(telemetry);
+                telemetry.update();
+            }
             if (isStopRequested()) {
                 return;
             }
             time.reset();
-            turret.setPosition(Turret.TURRET_ZERO_POS);
-            if (turret instanceof PwmControl) {
-                ((PwmControl) turret).setPwmEnable();
-            }
             aim.start();
             runRoute();
         } finally {
@@ -256,9 +255,6 @@ public class blueFlowerIdea extends LinearOpMode {
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         turret = hardwareMap.get(Servo.class, "turret");
 
-        if (turret instanceof PwmControl) {
-            ((PwmControl) turret).setPwmDisable();
-        }
         intake.setDirection(DcMotor.Direction.REVERSE);
 
 
@@ -382,7 +378,7 @@ public class blueFlowerIdea extends LinearOpMode {
                 backRight.setPower(0);
                 intake.setPower(0);
 
-                sleep(100);
+                settleDrive();
                 return;
             }
 
@@ -429,13 +425,21 @@ public class blueFlowerIdea extends LinearOpMode {
         setPower(0, 0, 0);
 
         intake.setPower(0);
-        sleep(100);
+        settleDrive();
 
 
 
 
 
 
+    }
+
+    private void settleDrive() {
+        ElapsedTime settle = new ElapsedTime();
+        while (opModeIsActive() && settle.milliseconds() < 100) {
+            aim.update(false, 0, false, false);
+            sleep(10);
+        }
     }
 
     private void setPower(double forward, double left, double turn){
@@ -525,45 +529,83 @@ public class blueFlowerIdea extends LinearOpMode {
         return new Pose2D(DistanceUnit.INCH, x, y, AngleUnit.RADIANS, heading);
     }
 
+    private void addRawTagTelemetry() {
+        LLResult frame = limelight.getLatestResult();
+        if (frame == null || !frame.isValid()) {
+            telemetry.addData("Raw Limelight", frame == null ? "No frame" : "Invalid frame");
+            return;
+        }
+        List<LLResultTypes.FiducialResult> tags = frame.getFiducialResults();
+        StringBuilder ids = new StringBuilder();
+        if (tags != null) {
+            for (LLResultTypes.FiducialResult tag : tags) {
+                ids.append(tag.getFiducialId()).append(' ');
+            }
+        }
+        double ageMs = frame.getStaleness() + frame.getCaptureLatency() + frame.getTargetingLatency();
+        telemetry.addData("Raw Limelight", "IDs %s | %.0f ms old",
+                ids.length() == 0 ? "none" : ids.toString().trim(), ageMs);
+    }
+
+    private static final double TURRET_LOCK_READY_MS = 250;
+
     private void runShooter(int tagID) {
         outtakeOn = true;
         transfer.stop();
 
         ElapsedTime flywheelTimer = new ElapsedTime();
         ElapsedTime aimSettle = new ElapsedTime();
+        boolean turretLocked = false;
         while (opModeIsActive() && flywheelTimer.seconds() < 2.0) {
             aim.update(false, 0, true, false);
             boolean aimReady = aim.isAimed();
             updateShooter(tagID);
             if (!aimReady) {
                 aimSettle.reset();
-            }
-            if (aimSettle.milliseconds() >= 250
-                    && Math.abs(shooter.getVelocity() - shooter.getGoal()) <= 50) {
+            } else if (aimSettle.milliseconds() >= TURRET_LOCK_READY_MS) {
+                turretLocked = true;
                 break;
             }
             telemetry.addData("Shot aim", aimReady ? "Ready" : "Waiting for turret");
+            telemetry.addData("Turret servo command (deg)", "%.1f", Turret.positionToAngle(turret.getPosition()));
+            telemetry.addData("Live hive tag", aim.getLimelight().sees() ? "Yes" : "No");
+            addRawTagTelemetry();
             aim.addTelemetry(telemetry);
             shooter.addTelemetry(telemetry);
             telemetry.update();
-            sleep(50);
+            sleep(10);
         }
 
         transfer.startFeeding();
         ElapsedTime shootTimer = new ElapsedTime();
         double shootSeconds = 5;
+        boolean intakeStarted = false;
 
         try {
             while (opModeIsActive() && shootTimer.seconds() < shootSeconds) {
-                aim.update(false, 0, true, false);
-                boolean aimReady = aim.isAimed();
+                if (!turretLocked) {
+                    aim.update(false, 0, true, false);
+                    if (!aim.isAimed()) {
+                        aimSettle.reset();
+                    } else if (aimSettle.milliseconds() >= TURRET_LOCK_READY_MS) {
+                        turretLocked = true;
+                    }
+                }
                 updateShooter(tagID);
-                intake.setPower(aimReady ? -0.5 : 0);
-                transfer.runFeeder(shooter, aimReady);
-                telemetry.addData("Shot aim", aimReady ? "Ready" : "Waiting for turret");
-                aim.addTelemetry(telemetry);
+                if (turretLocked && !intakeStarted) {
+                    intake.setPower(-0.5);
+                    intakeStarted = true;
+                }
+                transfer.runFeeder(shooter, turretLocked);
+                telemetry.addData("Shot aim", turretLocked ? "Locked for shot" : "Waiting for stable aim");
+                telemetry.addData("Turret servo command (deg)", "%.1f", Turret.positionToAngle(turret.getPosition()));
+                addRawTagTelemetry();
+                if (!turretLocked) {
+                    aim.addTelemetry(telemetry);
+                }
                 shooter.addTelemetry(telemetry);
                 telemetry.update();
+                sleep(10);
             }
         } finally {
             intake.setPower(0);
