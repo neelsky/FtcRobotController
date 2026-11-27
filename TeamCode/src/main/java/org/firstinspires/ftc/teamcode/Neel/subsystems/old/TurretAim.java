@@ -1371,4 +1371,178 @@ public class TurretAim {
                 : "UNKNOWN: back the robot up to the hive so the camera sees 2 tags, or put it on the auto start spot and press BACK/SHARE");
         telemetry.addData("robot", "x %.1f  y %.1f  h %.1f°", p.getX(), p.getY(), Math.toDegrees(p.getHeading()));
     }
+
+    //Auto Section
+    private int autoTagId = -1;
+    private long autoFrameTimestamp = Long.MIN_VALUE;
+    private double autoCameraX;
+    private double autoCameraY;
+    private double autoCameraAt = Double.NEGATIVE_INFINITY;
+    private boolean autoHigherIsLeft;
+
+    public static TurretAim forAuto(HardwareMap hardwareMap) {
+        return new TurretAim(hardwareMap, readTurretDirectionForAuto());
+    }
+
+    private TurretAim(HardwareMap hardwareMap, boolean higherIsLeft) {
+        this.hardwareMap = hardwareMap;
+        turret = hardwareMap.get(Servo.class, "turret");
+        turret.setDirection(Servo.Direction.FORWARD);
+        autoHigherIsLeft = higherIsLeft;
+    }
+
+    private static boolean readTurretDirectionForAuto() {
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.FileReader(TURRET_DIRECTION_FILE))) {
+            return Integer.parseInt(reader.readLine().trim()) > 0;
+        } catch (Exception ignored) {
+            return TURRET_HIGHER_IS_LEFT;
+        }
+    }
+
+    public void startForAuto() {
+        start();
+        turretEstimatePos = TURRET_ZERO_POS;
+        turretSlowEstimatePos = TURRET_ZERO_POS;
+        commandTurret(TURRET_ZERO_POS, 0);
+        turretLastMovingAt = clock.seconds();
+    }
+
+    public boolean updateAimForAuto(Pose pose, double targetX, double targetY, int tagId,
+            com.qualcomm.hardware.limelightvision.LLResult result) {
+        if (autoTagId != tagId) {
+            autoTagId = tagId;
+            autoFrameTimestamp = Long.MIN_VALUE;
+            autoCameraAt = Double.NEGATIVE_INFINITY;
+        }
+        if (!isGood(pose)) {
+            lastBluePose = null;
+            vx = 0;
+            vy = 0;
+            omegaDeg = 0;
+            historyCount = 0;
+            autoCameraAt = Double.NEGATIVE_INFINITY;
+            aimSource = "waiting for Pinpoint";
+            cameraStatus = "waiting for a valid robot position";
+            return false;
+        }
+
+        double now = clock.seconds();
+        double dt = updateVelocityForAuto(pose);
+        double servoSign = autoHigherIsLeft ? 1 : -1;
+        double actualDeg = servoSign * (turretEstimatePos - TURRET_ZERO_POS) * TURRET_DEGREES_PER_UNIT;
+        remember(now, pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()), actualDeg);
+
+        double cameraError = updateCameraForAuto(result, now, targetX, targetY);
+        boolean usingCamera = now - autoCameraAt <= CAMERA_MEMORY_S;
+        double aimX = usingCamera ? autoCameraX : targetX;
+        double aimY = usingCamera ? autoCameraY : targetY;
+        aimSource = usingCamera ? "Limelight and Pinpoint" : "Pinpoint";
+
+        boolean still = Math.hypot(vx, vy) < TURRET_HOLD_MAX_SPEED_IN_PER_S
+                && Math.abs(omegaDeg) < TURRET_HOLD_MAX_TURN_DEG_PER_S;
+        double leadVx = still ? 0 : vx;
+        double leadVy = still ? 0 : vy;
+        double heading = pose.getHeading() + (still ? 0 : Math.toRadians(omegaDeg) * TURRET_LAG_S);
+        double turretX = pose.getX() + leadVx * TURRET_LAG_S
+                + TURRET_FORWARD_OF_CENTER_IN * Math.cos(heading) - TURRET_LEFT_OF_CENTER_IN * Math.sin(heading);
+        double turretY = pose.getY() + leadVy * TURRET_LAG_S
+                + TURRET_FORWARD_OF_CENTER_IN * Math.sin(heading) + TURRET_LEFT_OF_CENTER_IN * Math.cos(heading);
+
+        double leadX = aimX - turretX;
+        double leadY = aimY - turretY;
+        double flightTime = 0;
+        for (int i = 0; i < 5; i++) {
+            leadX = aimX - turretX - leadVx * flightTime;
+            leadY = aimY - turretY - leadVy * flightTime;
+            flightTime = Math.hypot(leadX, leadY) / BALL_SPEED_IN_PER_S;
+        }
+
+        double trim = usingCamera ? 0 : TURRET_TRIM_DEG;
+        turretAngle = wrapDegrees(Math.toDegrees(Math.atan2(leadY, leadX) - heading)
+                - TURRET_ZERO_FROM_FRONT_DEG + trim);
+        double requestedPos = TURRET_ZERO_POS + servoSign * turretAngle / TURRET_DEGREES_PER_UNIT;
+        turretCanReach = Math.abs(turretAngle) <= TURRET_LIMIT_DEG
+                && requestedPos >= TURRET_MIN_POS && requestedPos <= TURRET_MAX_POS;
+        double limitedDeg = Math.max(-TURRET_LIMIT_DEG, Math.min(TURRET_LIMIT_DEG, turretAngle));
+        commandTurret(TURRET_ZERO_POS + servoSign * limitedDeg / TURRET_DEGREES_PER_UNIT, dt);
+        return usingCamera && turretCanReach && turretReady && Math.abs(cameraError) <= CAMERA_AGREE_DEG;
+    }
+
+    private double updateVelocityForAuto(Pose pose) {
+        double dt = Math.max(loopTimer.seconds(), 1e-3);
+        loopTimer.reset();
+        if (lastBluePose != null) {
+            double a = VELOCITY_SMOOTHING;
+            vx += a * ((pose.getX() - lastBluePose.getX()) / dt - vx);
+            vy += a * ((pose.getY() - lastBluePose.getY()) / dt - vy);
+            omegaDeg += a * (wrapDegrees(Math.toDegrees(pose.getHeading() - lastBluePose.getHeading())) / dt - omegaDeg);
+        }
+        lastBluePose = pose;
+        return dt;
+    }
+
+    private double updateCameraForAuto(com.qualcomm.hardware.limelightvision.LLResult result,
+            double now, double targetX, double targetY) {
+        cameraStatus = "no tags in view";
+        if (!USE_CAMERA_AIM || result == null || !result.isValid() || result.getFiducialResults() == null) {
+            return Double.NaN;
+        }
+        com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult target = null;
+        java.util.StringJoiner tags = new java.util.StringJoiner(", ");
+        for (com.qualcomm.hardware.limelightvision.LLResultTypes.FiducialResult tag : result.getFiducialResults()) {
+            tags.add(Integer.toString(tag.getFiducialId()));
+            if (tag.getFiducialId() == autoTagId) {
+                target = tag;
+            }
+        }
+        if (tags.length() > 0) {
+            cameraStatus = "sees " + tags + ", waiting for tag " + autoTagId;
+        }
+        if (target == null) {
+            return Double.NaN;
+        }
+        double ageMs = result.getStaleness() + result.getCaptureLatency() + result.getTargetingLatency();
+        if (!Double.isFinite(ageMs) || ageMs < 0 || ageMs > MAX_FRAME_AGE_MS) {
+            cameraStatus = "sees " + tags + ", waiting for a fresh frame";
+            return Double.NaN;
+        }
+        double errorDeg = Vision.tx(target) + Vision.AIM_TRIM_DEG;
+        double capture = now - ageMs / 1000.0;
+        if (!turretSettledSince(capture) || Math.abs(omegaDeg) > CAMERA_MAX_TURN_DEG_PER_S) {
+            cameraStatus = "sees " + tags + ", waiting for the turret to settle";
+            return Double.NaN;
+        }
+
+        long timestamp = result.getControlHubTimeStamp();
+        if (timestamp != autoFrameTimestamp) {
+            autoFrameTimestamp = timestamp;
+            double[] then = poseAt(capture);
+            double heading = Math.toRadians(then[2]);
+            double turretX = then[0] + TURRET_FORWARD_OF_CENTER_IN * Math.cos(heading)
+                    - TURRET_LEFT_OF_CENTER_IN * Math.sin(heading);
+            double turretY = then[1] + TURRET_FORWARD_OF_CENTER_IN * Math.sin(heading)
+                    + TURRET_LEFT_OF_CENTER_IN * Math.cos(heading);
+            double bearing = Math.toRadians(then[2] + TURRET_ZERO_FROM_FRONT_DEG + then[3] - errorDeg);
+            double range = Math.hypot(targetX - turretX, targetY - turretY);
+            double seenX = turretX + range * Math.cos(bearing);
+            double seenY = turretY + range * Math.sin(bearing);
+            double gain = now - autoCameraAt <= CAMERA_MEMORY_S ? CAMERA_TRACK_GAIN : CAMERA_SNAP_GAIN;
+            if (!Double.isFinite(autoCameraAt)) {
+                autoCameraX = targetX;
+                autoCameraY = targetY;
+            }
+            autoCameraX += gain * (seenX - autoCameraX);
+            autoCameraY += gain * (seenY - autoCameraY);
+            autoCameraAt = capture;
+        }
+        cameraStatus = String.format("sees %s, tag %d error %.1f deg", tags, autoTagId, errorDeg);
+        return errorDeg;
+    }
+
+    public void addTelemetryForAuto(Telemetry telemetry) {
+        telemetry.addData("Turret target", autoTagId);
+        telemetry.addData("Turret camera", cameraStatus);
+        telemetry.addData("Turret aim", "%s (%.1f deg)", aimSource, turretAngle);
+    }
 }
